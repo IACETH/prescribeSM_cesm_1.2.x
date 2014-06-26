@@ -840,7 +840,7 @@ contains
     do fc = 1,num_hydrologyc
        c = filter_hydrologyc(fc)
        do j = 1, nlevsoi
-          h2osoi_liq(c,j) = h2osoi_liq(c,j) + dwat2(c,j)*dzmm(c,j)
+          h2osoi_liq(c,j) = 0._r8
        end do
 
        !scs: calculate qcharge for case jwt < nlevsoi
