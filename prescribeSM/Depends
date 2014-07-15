@@ -67,7 +67,7 @@ accFldsMod.o : decompmod.mod clm_varcon.mod shr_const_mod.mod abortutils.mod clm
 accumulMod.o : decompmod.mod clm_varcon.mod shr_const_mod.mod abortutils.mod clm_varctl.mod clm_time_manager.mod spmdmod.mod shr_kind_mod.mod ncdio_pio.mod   
 clm_atmlnd.o : decompmod.mod abortutils.mod clm_varcon.mod shr_megan_mod.mod clm_varctl.mod clmtype.mod spmdmod.mod shr_kind_mod.mod seq_drydep_mod.mod subgridavemod.mod clm_varpar.mod shr_infnan_mod.mod   
 clm_cpl_indices.o : shr_megan_mod.mod mct_mod.mod shr_sys_mod.mod seq_drydep_mod.mod seq_flds_mod.mod   
-clm_driver.o : decompmod.mod abortutils.mod cnsetvaluemod.mod hydrologylakemod.mod canopyfluxesmod.mod clm_driverinitmod.mod baregroundfluxesmod.mod pft2colmod.mod hydrology1mod.mod histfilemod.mod clm_varctl.mod shr_sys_mod.mod cndvmod.mod surfacealbedomod.mod urbanmod.mod surfaceradiationmod.mod clmtype.mod pftdynmod.mod balancecheckmod.mod snicarmod.mod cnecosystemdynmod.mod biogeophysicslakemod.mod clm_varcon.mod clm_glclnd.mod hydrology2mod.mod clm_atmlnd.mod dynlandmod.mod restfilemod.mod ndepstreammod.mod perf_mod.mod drydepvelocity.mod cnbalancecheckmod.mod clm_time_manager.mod shr_kind_mod.mod spmdmod.mod cnannualupdatemod.mod seq_drydep_mod.mod filtermod.mod dustmod.mod vocemissionmod.mod staticecosysdynmod.mod accfldsmod.mod biogeophysics1mod.mod biogeophysics2mod.mod   
+clm_driver.o : prescribesoilmoisturemod.mod decompmod.mod abortutils.mod cnsetvaluemod.mod hydrologylakemod.mod canopyfluxesmod.mod clm_driverinitmod.mod baregroundfluxesmod.mod pft2colmod.mod hydrology1mod.mod histfilemod.mod clm_varctl.mod shr_sys_mod.mod cndvmod.mod surfacealbedomod.mod urbanmod.mod surfaceradiationmod.mod clmtype.mod pftdynmod.mod balancecheckmod.mod snicarmod.mod cnecosystemdynmod.mod biogeophysicslakemod.mod clm_varcon.mod clm_glclnd.mod hydrology2mod.mod clm_atmlnd.mod dynlandmod.mod restfilemod.mod ndepstreammod.mod perf_mod.mod drydepvelocity.mod cnbalancecheckmod.mod clm_time_manager.mod shr_kind_mod.mod spmdmod.mod cnannualupdatemod.mod seq_drydep_mod.mod filtermod.mod dustmod.mod vocemissionmod.mod staticecosysdynmod.mod accfldsmod.mod biogeophysics1mod.mod biogeophysics2mod.mod   
 clm_driverInitMod.o : clmtype.mod domainmod.mod clm_varcon.mod clm_atmlnd.mod shr_kind_mod.mod subgridavemod.mod clm_varpar.mod qsatmod.mod   
 clm_glclnd.o : decompmod.mod abortutils.mod clm_varctl.mod clmtype.mod domainmod.mod clm_varcon.mod clm_atmlnd.mod spmdmod.mod shr_kind_mod.mod clm_varpar.mod shr_infnan_mod.mod   
 clm_initializeMod.o : decompmod.mod abortutils.mod clmtypeinitmod.mod mct_mod.mod histfilemod.mod clm_varctl.mod shr_sys_mod.mod pftvarcon.mod urbaninitmod.mod urbanmod.mod domainmod.mod mkarbinitmod.mod pftdynmod.mod clm_varorb.mod fileutils.mod cnecosystemdynmod.mod surfrdmod.mod clm_glclnd.mod initgridcellsmod.mod shr_orb_mod.mod clm_atmlnd.mod ndepstreammod.mod restfilemod.mod urbaninputmod.mod perf_mod.mod cndvecosystemdyninimod.mod clm_time_manager.mod histfldsmod.mod controlmod.mod spmdmod.mod shr_kind_mod.mod decompinitmod.mod ncdio_pio.mod seq_drydep_mod.mod filtermod.mod clm_varsur.mod dustmod.mod clm_varpar.mod initsurfalbmod.mod vocemissionmod.mod staticecosysdynmod.mod accfldsmod.mod   
@@ -101,6 +101,7 @@ organicFileMod.o : abortutils.mod clm_varctl.mod clmtype.mod domainmod.mod fileu
 pft2colMod.o : clmtype.mod shr_kind_mod.mod subgridavemod.mod   
 pftdynMod.o : decompmod.mod abortutils.mod clm_varctl.mod shr_sys_mod.mod pftvarcon.mod clmtype.mod fileutils.mod shr_const_mod.mod clm_varcon.mod clm_time_manager.mod shr_kind_mod.mod spmdmod.mod ncdio_pio.mod clm_varsur.mod clm_varpar.mod   
 pftvarcon.o : abortutils.mod clm_varctl.mod fileutils.mod clm_varcon.mod spmdmod.mod shr_kind_mod.mod ncdio_pio.mod clm_varpar.mod   
+prescribeSoilMoistureMod.o : shr_kind_mod.mod clmtype.mod clm_varctl.mod clm_time_manager.mod decompmod.mod clm_varpar.mod clm_varcon.mod fileutils.mod spmdmod.mod ncdio_pio.mod netcdf.mod
 restFileMod.o : decompmod.mod biogeophysrestmod.mod abortutils.mod histfilemod.mod clm_varctl.mod subgridrestmod.mod accumulmod.mod fileutils.mod surfrdmod.mod clm_time_manager.mod spmdmod.mod shr_kind_mod.mod ncdio_pio.mod cnrestmod.mod clm_varpar.mod croprestmod.mod   
 spmdGathScatMod.o : decompmod.mod abortutils.mod mct_mod.mod clm_varctl.mod clm_varcon.mod perf_mod.mod spmdmod.mod shr_kind_mod.mod   
 spmdMod.o : clm_varctl.mod shr_kind_mod.mod   
@@ -194,6 +195,7 @@ organicfilemod.mod : organicFileMod.o
 pft2colmod.mod : pft2colMod.o
 pftdynmod.mod : pftdynMod.o
 pftvarcon.mod : pftvarcon.o
+prescribesoilmoisturemod.mod : prescribeSoilMoistureMod.o
 qsatmod.mod : QSatMod.o
 restfilemod.mod : restFileMod.o
 snicarmod.mod : SNICARMod.o
