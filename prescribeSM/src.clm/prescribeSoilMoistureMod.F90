@@ -13,7 +13,7 @@ module prescribeSoilMoistureMod
   use shr_kind_mod,    only : r8 => shr_kind_r8
   use clm_varpar,      only : nlevgrnd
   use abortutils,      only : endrun
-
+  use clm_varctl,      only : iulog
 ! !PUBLIC TYPES:
   implicit none
   save
@@ -237,7 +237,7 @@ contains
     use clm_time_manager, only : get_nstep
     use ncdio_pio
     use netcdf
-    use clm_varctl,   only : iulog
+    
 ! !ARGUMENTS:
     implicit none
 
