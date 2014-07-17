@@ -323,7 +323,7 @@ contains
     call getfil('/cluster/home03/uwis/mathause/data/SM_test.nc', locfn, 0)
     call ncd_pio_openfile (ncid, trim(locfn), 0)
 
-
+    write(iulog,*) 'size ',size(mh2osoi_liq)
     do k=1,2   !loop over months and read vegetated data
 
        !allocate(arrayl(begc:endc),stat=ier)
