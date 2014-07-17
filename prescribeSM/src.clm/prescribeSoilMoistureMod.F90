@@ -262,6 +262,7 @@ contains
     integer :: ncolumn_i                  ! number of columns
     integer :: nlev_i                     ! number of input data soil levels
     integer :: begc,endc                  ! beg and end local c index
+    integer :: begp,endp
     integer :: ier,ret                    ! error code
     integer :: closelatidx,closelonidx
     real(r8):: closelat,closelon
@@ -288,7 +289,9 @@ contains
     ! Determine necessary indices
 
 
-    call get_proc_bounds(begc=begc,endc=endc)
+    call get_proc_bounds(begc=begc,endc=endc,begp=begp,endp=endp)
+    write(iulog,*) 'begc, endc ',begc,endc
+    write(iulog,*) 'begp, endp ',begp,endp
 
     allocate(mh2osoi_liq(begc:endc,1:nlevgrnd), &
              mh2osoi_ice(begc:endc,1:nlevgrnd), stat=ier)
@@ -317,20 +320,21 @@ contains
 
        endif   ! masterproc
 
-    call getfil('/cluster/home/mathause/data/SM_clim_column_1990-2010.nc', locfn, 0)
+    call getfil('/cluster/home03/uwis/mathause/data/SM_test.nc', locfn, 0)
     call ncd_pio_openfile (ncid, trim(locfn), 0)
 
 
     do k=1,2   !loop over months and read vegetated data
 
-
        !allocate(arrayl(begc:endc),stat=ier)
        !if (ier /= 0) then
        !   write(iulog,*)subname, 'allocation array error '; call endrun()
        !end if
-
-       write(iulog,*) 'Before read '
-       !do j = 1,nlevgrnd
+       #if (masterproc) then
+         write(iulog,*) 'Before read '
+         write(iulog,*) size(mh2osoi_liq)
+       #endif ! masterproc
+        !do j = 1,nlevgrnd
           !beg3d(1) = j         ; len3d(1) = 1
           !beg3d(2) = 1         ; len3d(2) = ncolumn_i
           !beg3d(3) = months_soil(k) ; len3d(3) = 1
