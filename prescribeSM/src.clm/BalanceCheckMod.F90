@@ -425,8 +425,10 @@ contains
           indexc = c
        end if
     end do
+    ! MHJH
     ! turn off water balance check
     found = .false.
+    ! MHJH
     if ( found ) then
        write(iulog,*)'WARNING:  water balance error ',&
             ' nstep = ',nstep,' indexc= ',indexc,' errh2o= ',errh2o(indexc),' landunit type= ',ltype(clandunit(indexc))
