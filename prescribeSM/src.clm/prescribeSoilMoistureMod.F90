@@ -66,10 +66,10 @@ contains
 !
 ! !USES:
     use clmtype
-
+    use decompMod,  only : get_proc_bounds
     use clm_varpar, only : nlevsoi,nlevgrnd
     use clm_varcon, only : istsoil
-
+    use shr_infnan_mod, only : nan => shr_infnan_nan, assignment(=)
 !    use pftvarcon, only : noveg, ncorn, nbrdlf_dcd_brl_shrub
 !
 ! !ARGUMENTS:
@@ -108,9 +108,10 @@ contains
 ! !OTHER LOCAL VARIABLES:
 !EOP
 !
-!    integer  :: fp,p,c   ! indices
-    integer  :: fc,j,l,c      ! indices
- 
+
+    integer :: fc,j,l,c         ! indices
+    integer :: begc,endc        ! beg and end local c index
+    integer :: ier              ! error code
 !-----------------------------------------------------------------------
 
 
@@ -125,6 +126,26 @@ contains
 
     !ltype       => clm3%g%l%itype
     ltype       => lun%itype
+
+
+    call get_proc_bounds(begc=begc,endc=endc)
+    
+    if (.not.allocated(mh2osoi_liq2t)) then
+
+      allocate (mh2osoi_liq2t(begc:endc,1:nlevgrnd,2), &
+              mh2osoi_ice2t(begc:endc,1:nlevgrnd,2), stat=ier)
+
+      if (ier /= 0) then
+         write(iulog,*) 'prescribeSoilMoistureMod allocation error'
+      call endrun
+      endif
+
+    mh2osoi_liq2t(:,:,:) = nan
+    mh2osoi_ice2t(:,:,:) = nan
+
+    endif
+
+
     
     call interpMonthlySoilMoisture()
 
@@ -227,16 +248,15 @@ contains
 !
 ! !USES:
     use clmtype
-    use shr_kind_mod, only : r8 => shr_kind_r8
-    use decompMod   , only : get_proc_bounds, ldecomp, gsmap_lnd_gdc2glo
-    use clm_varpar  , only : nlevgrnd
-    use clm_varcon  , only : istsoil
-
-    use fileutils   , only : getfil
-    use spmdMod     , only : masterproc, mpicom, MPI_REAL8, MPI_INTEGER
-    use clm_time_manager, only : get_nstep
     use ncdio_pio
     use netcdf
+    use shr_kind_mod, only : r8 => shr_kind_r8
+    use decompMod,    only : get_proc_bounds, ldecomp, gsmap_lnd_gdc2glo
+    use clm_varpar,   only : nlevgrnd
+    use clm_varcon,   only : istsoil
+    use fileutils,    only : getfil
+    use spmdMod,      only : masterproc, mpicom, MPI_REAL8, MPI_INTEGER
+    use clm_time_manager, only : get_nstep
     
 ! !ARGUMENTS:
     implicit none
@@ -289,9 +309,9 @@ contains
     ! Determine necessary indices
 
 
-    call get_proc_bounds(begc=begc,endc=endc,begp=begp,endp=endp)
+    call get_proc_bounds(begc=begc,endc=endc)
     write(iulog,*) 'begc, endc ',begc,endc
-    write(iulog,*) 'begp, endp ',begp,endp
+    !write(iulog,*) 'begp, endp ',begp,endp
 
     allocate(mh2osoi_liq(begc:endc,1:nlevgrnd), &
              mh2osoi_ice(begc:endc,1:nlevgrnd), stat=ier)
@@ -320,33 +340,41 @@ contains
 
        endif   ! masterproc
 
-    call getfil('/cluster/home03/uwis/mathause/data/SM_test.nc', locfn, 0)
-    call ncd_pio_openfile (ncid, trim(locfn), 0)
+
 
     write(iulog,*) 'size ',size(mh2osoi_liq)
     do k=1,2   !loop over months and read vegetated data
+
+      call getfil('/cluster/home03/uwis/mathause/data/SM_test.nc', locfn, 0)
+      call ncd_pio_openfile (ncid, trim(locfn), 0)
 
        !allocate(arrayl(begc:endc),stat=ier)
        !if (ier /= 0) then
        !   write(iulog,*)subname, 'allocation array error '; call endrun()
        !end if
-       #if (masterproc) then
+       if (masterproc) then
          write(iulog,*) 'Before read '
          write(iulog,*) size(mh2osoi_liq)
-       #endif ! masterproc
+       endif ! masterproc
         !do j = 1,nlevgrnd
           !beg3d(1) = j         ; len3d(1) = 1
           !beg3d(2) = 1         ; len3d(2) = ncolumn_i
           !beg3d(3) = months_soil(k) ; len3d(3) = 1
 
-        call ncd_io(ncid=ncid, varname='SOILLIQ', flag='read', data=mh2osoi_liq, dim1name=grlnd, &
+        write(iulog,*) 'Before read '
+        write(iulog,*) 'k ',k
+        write(iulog,*) 'month(k) ',months_soil(k)
+        call ncd_io(ncid=ncid, varname='SOILLIQ', flag='read', data=mh2osoi_liq, dim1name=namec, &
           nt=months_soil(k), readvar=readvar)
+        write(iulog,*) 'Tried to read SOILLIQ'
         if (.not. readvar) call endrun( trim(subname)//' ERROR: SOILLIQ NOT on pSM file' )
+        write(iulog,*) 'Read SOILLIQ'
 
-        call ncd_io(ncid=ncid, varname='SOILICE', flag='read', data=mh2osoi_liq, dim1name=grlnd, &
+        call ncd_io(ncid=ncid, varname='SOILICE', flag='read', data=mh2osoi_liq, dim1name=namec, &
           nt=months_soil(k), readvar=readvar)
+        write(iulog,*) 'Tried to read SOILICE'
         if (.not. readvar) call endrun( trim(subname)//' ERROR: SOILICE NOT on pSM file' )
-
+        write(iulog,*) 'Read SOILICE'
           !mh2osoi_liq(begc:endc,j) = arrayl(begc:endc)
 
           !call ncd_iolocal(ncid,'SOILLIQ','read',arrayl,namec,beg3d,len3d,status=ret)
