@@ -566,8 +566,7 @@ subroutine clm_drv(doalb, nextsw_cday, declinp1, declin, rstwr, nlend, rdate)
      ! Prescribe Soil Moisture
      ! ============================================================================
 
-     call prescribeSoilMoisture(begc, endc, begp, endp, &
-                                filter(nc)%num_nolakec, filter(nc)%nolakec)
+     call prescribeSoilMoisture(begc, endc, filter(nc)%num_nolakec, filter(nc)%nolakec)
      ! MHJH
 
      ! ============================================================================
