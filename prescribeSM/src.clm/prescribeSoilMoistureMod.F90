@@ -29,14 +29,9 @@ module prescribeSoilMoistureMod
 !
 
 ! !PRIVATE TYPES:
-  integer , private :: InterpMonths1            ! saved month index
+  integer , private :: InterpMonths1              ! saved month index
   integer , private :: InterpMonths1_soil         ! saved month index
-  real(r8), private :: timwt(2)                 ! time weights for month 1 and month 2
   real(r8), private :: timwt_soil(2)              ! time weights for month 1 and month 2
-  real(r8), private, allocatable :: mlai2t(:,:) ! lai for interpolation (2 months)
-  real(r8), private, allocatable :: msai2t(:,:) ! sai for interpolation (2 months)
-  real(r8), private, allocatable :: mhvt2t(:,:) ! top vegetation height for interpolation (2 months)
-  real(r8), private, allocatable :: mhvb2t(:,:) ! bottom vegetation height for interpolation(2 months)
   real(r8), private, allocatable :: mh2osoi_liq2t(:,:,:) !  liquid soil water for interpolation (2 months) read fro m input files
   real(r8), private, allocatable :: mh2osoi_ice2t(:,:,:) !  frozen soil water for interpolation (2 months) read fro m input files
 
@@ -49,15 +44,13 @@ module prescribeSoilMoistureMod
 
 contains
 
-
 !-----------------------------------------------------------------------
 !BOP
 !
 ! !IROUTINE: prescribeSoilMoisture
 !
 ! !INTERFACE:
-  subroutine prescribeSoilMoisture(lbc,ubc,lbp,ubp, &
-                                   num_nolakec,filter_nolakec)
+  subroutine prescribeSoilMoisture(lbc,ubc, num_nolakec, filter_nolakec)
 !
 ! !DESCRIPTION:
 ! 
@@ -67,20 +60,19 @@ contains
 ! !USES:
     use clmtype
     use decompMod,  only : get_proc_bounds
-    use clm_varpar, only : nlevsoi,nlevgrnd
+    use clm_varpar, only : nlevgrnd
     use clm_varcon, only : istsoil
     use shr_infnan_mod, only : nan => shr_infnan_nan, assignment(=)
 !    use pftvarcon, only : noveg, ncorn, nbrdlf_dcd_brl_shrub
 !
 ! !ARGUMENTS:
     implicit none
-    integer, intent(in) :: lbp, ubp                    ! pft bounds
     integer, intent(in) :: lbc, ubc                    ! column bounds
 
 
     integer, intent(in) :: num_nolakec                 ! number of column non-lake points in column filter
     integer, intent(in) :: filter_nolakec(ubc-lbc+1)   ! column filter for non-lake points
-    integer , pointer :: ltype(:)                      ! landunit type index
+    integer, pointer    :: ltype(:)                    ! landunit type index
 
 !
 ! !CALLED FROM:
@@ -91,10 +83,7 @@ contains
 !
 ! local pointers to implicit in arguments
 !
-    integer , pointer :: pcolumn(:)   ! column index associated with each pft
     integer , pointer :: clandunit(:) ! column's landunit
-    real(r8), pointer :: snowdp(:)    ! snow height (m)
-    integer , pointer :: ivt(:)       ! pft vegetation type
 
 !
 ! local pointers to implicit out arguments
@@ -115,57 +104,49 @@ contains
 !-----------------------------------------------------------------------
 
 
-    !h2osoi_liq  => clm3%g%l%c%cws%h2osoi_liq
-    !h2osoi_ice  => clm3%g%l%c%cws%h2osoi_ice
-
+    ! implicit inout arguments
     h2osoi_liq  => cws%h2osoi_liq
     h2osoi_ice  => cws%h2osoi_ice
 
-    !clandunit   => clm3%g%l%c%landunit
+    ! implicit in arguments
     clandunit   => col%landunit
-
-    !ltype       => clm3%g%l%itype
     ltype       => lun%itype
 
 
     call get_proc_bounds(begc=begc,endc=endc)
     
-    if (.not.allocated(mh2osoi_liq2t)) then
+    if (.not. allocated(mh2osoi_liq2t) .or. .not. allocated(mh2osoi_ice2t)) then
 
       allocate (mh2osoi_liq2t(begc:endc,1:nlevgrnd,2), &
-              mh2osoi_ice2t(begc:endc,1:nlevgrnd,2), stat=ier)
+                mh2osoi_ice2t(begc:endc,1:nlevgrnd,2), stat=ier)
 
       if (ier /= 0) then
          write(iulog,*) 'prescribeSoilMoistureMod allocation error'
       call endrun
       endif
 
-    mh2osoi_liq2t(:,:,:) = nan
-    mh2osoi_ice2t(:,:,:) = nan
-
+      mh2osoi_liq2t(:,:,:) = nan
+      mh2osoi_ice2t(:,:,:) = nan
+    
     endif
 
 
     
     call interpMonthlySoilMoisture()
 
+
     do fc = 1, num_nolakec
        c = filter_nolakec(fc)
        l = clandunit(c)
-       do j = 1, nlevsoi
-          if (ltype(l) == istsoil) then
+       if (ltype(l) == istsoil) then
+        do j = 1, nlevgrnd
              h2osoi_liq(c,j) = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
              h2osoi_ice(c,j) = timwt_soil(1)*mh2osoi_ice2t(c,j,1) + timwt_soil(2)*mh2osoi_ice2t(c,j,2)
-          endif
+        endif
        end do
     end do
+
   end subroutine prescribeSoilMoisture
-
-
-
-
-
-
 
 
 
@@ -181,8 +162,8 @@ contains
 ! Determine if 2 new months of data are to be read.
 !
 ! !USES:
-    use shr_kind_mod    , only : r8 => shr_kind_r8
-    use clm_varctl, only : fsurdat
+    use shr_kind_mod,     only : r8 => shr_kind_r8
+    use clm_varctl,       only : fsurdat
     use clm_time_manager, only : get_curr_date, get_step_size, get_perp_date, is_perpetual
 !
 ! !ARGUMENTS:
@@ -251,12 +232,11 @@ contains
     use ncdio_pio
     use netcdf
     use shr_kind_mod, only : r8 => shr_kind_r8
-    use decompMod,    only : get_proc_bounds, ldecomp, gsmap_lnd_gdc2glo
+    use decompMod,    only : get_proc_bounds
     use clm_varpar,   only : nlevgrnd
     use clm_varcon,   only : istsoil
     use fileutils,    only : getfil
-    use spmdMod,      only : masterproc, mpicom, MPI_REAL8, MPI_INTEGER
-    use clm_time_manager, only : get_nstep
+    use spmdMod,      only : masterproc
     
 ! !ARGUMENTS:
     implicit none
@@ -277,12 +257,9 @@ contains
     integer , pointer :: ltype(:)         ! landunit type index
     type(file_desc_t)  :: ncid            ! netcdf id
     integer :: dimid,varid                ! input netCDF id's
-    integer :: beg3d(3),len3d(3)          ! netCDF variable edges
     integer :: ntim                       ! number of input data time samples
     integer :: ncolumn_i                  ! number of columns
-    integer :: nlev_i                     ! number of input data soil levels
     integer :: begc,endc                  ! beg and end local c index
-    integer :: begp,endp
     integer :: ier,ret                    ! error code
     integer :: closelatidx,closelonidx
     real(r8):: closelat,closelon
@@ -301,7 +278,6 @@ contains
 
 
     ! Assign local pointers to derived subtypes components (landunit-level)
-    !ltype               => clm3%g%l%itype
     ltype       => lun%itype
     ! Assign local pointers to derived subtypes components (column-level)
     !clandunit       => clm3%g%l%c%landunit
@@ -310,8 +286,8 @@ contains
 
 
     call get_proc_bounds(begc=begc,endc=endc)
-    write(iulog,*) 'begc, endc ',begc,endc
-    !write(iulog,*) 'begp, endp ',begp,endp
+
+
 
     allocate(mh2osoi_liq(begc:endc,1:nlevgrnd), &
              mh2osoi_ice(begc:endc,1:nlevgrnd), stat=ier)
@@ -326,70 +302,39 @@ contains
     ! ----------------------------------------------------------------------
     
     if (masterproc) then
-
           write(iulog,*) 'Attempting to read monthly soil moisture data .....'
-          write(iulog,*) 'nstep = ',get_nstep(),' month = ',kmo,' day = ',kda
-
-          !call check_ret(nf90_open(locfn, 0, ncid), subname)
-          !call check_ret(nf90_inq_dimid (ncid, 'column', dimid), subname)
-          !call check_ret(nf90_inquire_dimension(ncid, dimid, len=ncolumn_i), subname)
-          !call check_ret(nf90_inq_dimid(ncid, 'levgrnd', dimid), subname)
-          !call check_ret(nf90_inquire_dimension(ncid, dimid, len=nlev_i), subname)
-          !call check_ret(nf90_inq_dimid(ncid, 'time', dimid), subname)
-          !call check_ret(nf90_inquire_dimension(ncid, dimid, len=ntim), subname)
-
-       endif   ! masterproc
+          write(iulog,*) 'month = ',kmo,' day = ',kda
+    endif ! masterproc
 
 
-
-    write(iulog,*) 'size ',size(mh2osoi_liq)
     do k=1,2   !loop over months and read vegetated data
 
       call getfil('/cluster/home03/uwis/mathause/data/SM_test.nc', locfn, 0)
       call ncd_pio_openfile (ncid, trim(locfn), 0)
 
-       !allocate(arrayl(begc:endc),stat=ier)
-       !if (ier /= 0) then
-       !   write(iulog,*)subname, 'allocation array error '; call endrun()
-       !end if
-       if (masterproc) then
-         write(iulog,*) 'Before read '
-         write(iulog,*) size(mh2osoi_liq)
-       endif ! masterproc
-        !do j = 1,nlevgrnd
-          !beg3d(1) = j         ; len3d(1) = 1
-          !beg3d(2) = 1         ; len3d(2) = ncolumn_i
-          !beg3d(3) = months_soil(k) ; len3d(3) = 1
+
+      if (masterproc) then
+        write(iulog,*) 'Before read '
+        write(iulog,*) size(mh2osoi_liq)
+      endif ! masterproc
 
         write(iulog,*) 'Before read '
-        write(iulog,*) 'k ',k
         write(iulog,*) 'month(k) ',months_soil(k)
+
         call ncd_io(ncid=ncid, varname='SOILLIQ', flag='read', data=mh2osoi_liq, dim1name=namec, &
           nt=months_soil(k), readvar=readvar)
-        write(iulog,*) 'Tried to read SOILLIQ'
+
         if (.not. readvar) call endrun( trim(subname)//' ERROR: SOILLIQ NOT on pSM file' )
-        write(iulog,*) 'Read SOILLIQ'
+        
 
         call ncd_io(ncid=ncid, varname='SOILICE', flag='read', data=mh2osoi_liq, dim1name=namec, &
           nt=months_soil(k), readvar=readvar)
-        write(iulog,*) 'Tried to read SOILICE'
         if (.not. readvar) call endrun( trim(subname)//' ERROR: SOILICE NOT on pSM file' )
-        write(iulog,*) 'Read SOILICE'
-          !mh2osoi_liq(begc:endc,j) = arrayl(begc:endc)
+        
+        
 
-          !call ncd_iolocal(ncid,'SOILLIQ','read',arrayl,namec,beg3d,len3d,status=ret)
-          !write(iulog,*) 'After read '
-          !if (ret /= 0) call endrun( trim(subname)//' ERROR: SOILLIQ NOT on clim file' )
-          
-
-          !call ncd_iolocal(ncid,'SOILICE','read',arrayl,namec,beg3d,len3d,status=ret)
-          !if (ret /= 0) call endrun( trim(subname)//' ERROR: SOILICE NOT on clim file' )
-          !mh2osoi_ice(begc:endc,j) = arrayl(begc:endc)
-
-       !enddo
-
-       !deallocate(arrayl)
       call ncd_pio_closefile(ncid)
+
       if (masterproc) then
           !call check_ret(nf90_close(ncid), subname)
           write(iulog,*) 'Successfully read monthly soil moisture data for'
@@ -399,15 +344,25 @@ contains
 
 
        ! store data directly in clmtype structure
-
        do c = begc,endc
-
           l = clandunit(c)
 
           if (ltype(l) == istsoil) then 
+             
              do j = 1, nlevgrnd
                 mh2osoi_liq2t(c,j,k) = mh2osoi_liq(c,j)
                 mh2osoi_ice2t(c,j,k) = mh2osoi_ice(c,j)
+
+                ! there seems to be a problem with mh2osoi_ice2t
+                if ( mh2osoi_liq(c,j) < 0._r8) then
+                  write(iulog,*) 'ASSIGN LIQ ',j,c,k,mh2osoi_liq2t(c,j,k)
+                endif
+                if  mh2osoi_ice(c,j) < 0._r8) then
+                  mh2osoi_ice2t(c,j,k)=0._r8
+                  write(iulog,*) 'ASSIGN ICE2 ',j,c,k,mh2osoi_ice2t(c,j,k)
+                endif
+
+
              end do
           end if
 
