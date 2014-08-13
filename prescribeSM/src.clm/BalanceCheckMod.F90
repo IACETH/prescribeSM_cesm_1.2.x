@@ -701,6 +701,12 @@ contains
           indexc = c
        end if
     end do
+
+    ! MHJH
+    ! turn off soil balance check
+    found = .false.
+    ! MHJH
+
     if ( found ) then
        write(iulog,100)'BalanceCheck: soil balance error',nstep,indexc,errsoi_col(indexc)
        if (abs(errsoi_col(indexc)) > .10_r8 .and. (nstep > 2) ) then
