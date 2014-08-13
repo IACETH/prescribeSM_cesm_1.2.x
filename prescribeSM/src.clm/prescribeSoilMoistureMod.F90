@@ -142,8 +142,8 @@ contains
         do j = 1, nlevgrnd
              h2osoi_liq(c,j) = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
              h2osoi_ice(c,j) = timwt_soil(1)*mh2osoi_ice2t(c,j,1) + timwt_soil(2)*mh2osoi_ice2t(c,j,2)
-        endif
-       end do
+        end do
+       end if
     end do
 
   end subroutine prescribeSoilMoisture
@@ -309,7 +309,7 @@ contains
 
     do k=1,2   !loop over months and read vegetated data
 
-      call getfil('/cluster/home03/uwis/mathause/data/SM_test.nc', locfn, 0)
+      call getfil('/cluster/home03/uwis/mathause/data/SM_test_3D.nc', locfn, 0)
       call ncd_pio_openfile (ncid, trim(locfn), 0)
 
 
@@ -327,7 +327,7 @@ contains
         if (.not. readvar) call endrun( trim(subname)//' ERROR: SOILLIQ NOT on pSM file' )
         
 
-        call ncd_io(ncid=ncid, varname='SOILICE', flag='read', data=mh2osoi_liq, dim1name=namec, &
+        call ncd_io(ncid=ncid, varname='SOILICE', flag='read', data=mh2osoi_ice, dim1name=namec, &
           nt=months_soil(k), readvar=readvar)
         if (.not. readvar) call endrun( trim(subname)//' ERROR: SOILICE NOT on pSM file' )
         
@@ -354,11 +354,10 @@ contains
                 mh2osoi_ice2t(c,j,k) = mh2osoi_ice(c,j)
 
                 ! there seems to be a problem with mh2osoi_ice2t
-                if ( mh2osoi_liq(c,j) < 0._r8) then
+                if (mh2osoi_liq(c,j) < 0._r8) then
                   write(iulog,*) 'ASSIGN LIQ ',j,c,k,mh2osoi_liq2t(c,j,k)
                 endif
-                if  mh2osoi_ice(c,j) < 0._r8) then
-                  mh2osoi_ice2t(c,j,k)=0._r8
+                if  (mh2osoi_ice(c,j) < 0._r8) then
                   write(iulog,*) 'ASSIGN ICE2 ',j,c,k,mh2osoi_ice2t(c,j,k)
                 endif
 
