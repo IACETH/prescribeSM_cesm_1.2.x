@@ -25,16 +25,18 @@ module prescribeSoilMoistureMod
 
 ! !PRIVATE MEMBER FUNCTIONS:
   private :: interpMonthlySoilMoisture   ! interpolate monthly SM data
-  private :: readMonthlySoilMoisture     ! read SM data from file
+  private :: readSoilMoisture     ! read SM data from file
 !
 
 ! !PRIVATE TYPES:
-  integer , private :: InterpMonths1              ! saved month index
-  integer , private :: InterpMonths1_soil         ! saved month index
+
+  integer , private :: TimeStep_old = 0           ! time step at last call
   real(r8), private :: timwt_soil(2)              ! time weights for month 1 and month 2
   real(r8), private, allocatable :: mh2osoi_liq2t(:,:,:) !  liquid soil water for interpolation (2 months) read fro m input files
   real(r8), private, allocatable :: mh2osoi_ice2t(:,:,:) !  frozen soil water for interpolation (2 months) read fro m input files
 
+  logical, private            :: monthly  ! if .true. -> monthly, else daily
+  character(len=256), private :: pSMfile  ! file name mit SM data to prescribe
 
 ! !REVISION HISTORY:
 ! Created by 
@@ -130,8 +132,9 @@ contains
     
     endif
 
-
-    
+    ! get file name and monthly or daily
+    call initPrescribeSoilMoisture ()
+    ! get time weight and possibly a new time step
     call interpMonthlySoilMoisture()
 
 
@@ -147,6 +150,82 @@ contains
     end do
 
   end subroutine prescribeSoilMoisture
+
+
+
+
+!-----------------------------------------------------------------------
+!BOP
+!
+! !IROUTINE: interpMonthlySoil
+!
+! !INTERFACE:
+  subroutine initPrescribeSoilMoisture ()
+!
+! !DESCRIPTION:
+! Set monthly or daily SM, define file with SM data
+! goal -> use namlist
+!
+! !USES:
+  use fileutils        , only : getfil, getavu, relavu
+! !ARGUMENTS:
+    implicit none
+!
+! !REVISION HISTORY:
+! Created by Mathias Hauser
+!
+!
+! !LOCAL VARIABLES:
+    integer :: unitn
+    integer :: ierr                    
+    character(len=256) :: locfn        ! local file name
+    character(len=256) :: subname      ! name of routine
+!EOP
+
+	subname = 'initPrescribeSoilMoisture'
+
+    ! Input datasets
+
+    namelist /prescribe_sm/  &
+         pSMfile, monthly
+
+
+
+
+    ! CAREFUL: IF YOU USE A DAILY pSMfile BUT SET monthly = .true.
+    ! THE MODEL WILL STILL RUN! 
+
+    ! pSMfile = '/cluster/home03/uwis/mathause/data/SM_in_3D_daily.nc'
+    ! monthly = .false.
+
+
+    call getfil(trim('prescribe_SM_nl'), locfn, 0)
+    
+    write(iulog,*) 'local file name: ', trim(locfn)
+    
+
+    unitn = getavu()
+    
+    write(iulog,*) 'Read in prescribe_sm namelist from: prescribe_SM_nl'
+    
+    open( unitn, file=trim(locfn), status='old' )
+    ierr = 1
+    do while ( ierr /= 0 )
+        read(unitn, prescribe_sm, iostat=ierr)
+        if (ierr < 0) then
+            call endrun( trim(subname)//' encountered end-of-file on clm_inparm read' )
+        endif
+    end do
+    call relavu( unitn )
+
+
+    write(iulog,*) 'Read pSMfile from namelist', trim(pSMfile)
+    write(iulog,*) 'Read monthly from namelist', monthly
+
+
+
+
+  end subroutine initPrescribeSoilMoisture
 
 
 
@@ -182,9 +261,18 @@ contains
     real(r8):: dtime       ! land model time step (sec)
     real(r8):: t           ! a fraction: kda/ndaypm
     integer :: it(2)       ! month 1 and month 2 (step 1)
-    integer :: months_soil(2) ! months to be interpolated (1 to 12)
-    integer, dimension(12) :: ndaypm= &
-         (/31,28,31,30,31,30,31,31,30,31,30,31/) !days per month
+    integer :: TimeStep(2) ! months to be interpolated (1 to 12)
+    integer :: doy         ! day of year (1..365)    
+
+
+    real(r8) :: nsec = 86400._r8 ! num of sec per day
+    integer, dimension(12) :: ndaypm = &
+         (/31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31/) !days per month
+
+    integer, dimension(12) :: cdaypm = &
+        (/0,  31,  59,  90, 120, 151, 181, 212, 243, 273, 304, 334/) ! cumulative
+        ! number of days per month
+
 !-----------------------------------------------------------------------
     dtime = get_step_size()
 
@@ -194,19 +282,43 @@ contains
        call get_curr_date(kyr, kmo, kda, ksec, offset=int(dtime))
     end if
 
-    t = (kda-0.5_r8) / ndaypm(kmo)
-    it(1) = t + 0.5_r8
-    it(2) = it(1) + 1
-    months_soil(1) = kmo + it(1) - 1
-    months_soil(2) = kmo + it(2) - 1
-    if (months_soil(1) <  1) months_soil(1) = 12
-    if (months_soil(2) > 12) months_soil(2) = 1
-    timwt_soil(1) = (it(1)+0.5_r8) - t
-    timwt_soil(2) = 1._r8-timwt_soil(1)
+    if (monthly) then ! interpolate monthly data
 
-    if (InterpMonths1_soil /= months_soil(1)) then
-       call readMonthlySoilMoisture (kmo, kda, months_soil)
-       InterpMonths1_soil = months_soil(1)
+        t = (kda-0.5_r8) / ndaypm(kmo)
+        it(1) = t + 0.5_r8
+        it(2) = it(1) + 1
+        TimeStep(1) = kmo + it(1) - 1
+        TimeStep(2) = kmo + it(2) - 1
+        if (TimeStep(1) <  1) TimeStep(1) = 12
+        if (TimeStep(2) > 12) TimeStep(2) = 1
+        timwt_soil(1) = (it(1)+0.5_r8) - t
+        timwt_soil(2) = 1._r8-timwt_soil(1)
+
+    else ! interpolate daily data
+        doy = cdaypm(kmo) + kda
+
+        ! fraction of day that has passed
+        t = ksec / nsec
+
+        ! if t < 0.5 we need 'doy -1' and 'doy'
+        ! else we need 'doy' and 'doy + 1'
+        TimeStep(1) = doy + floor(t - 0.5)
+        TimeStep(2) = doy + floor(t + 0.5)
+
+        if (TimeStep(1) < 1) TimeStep(1) = 365
+        if (TimeStep(2) > 365) TimeStep(2) = 1
+
+        timwt_soil(1) = 1._r8 - abs(t - 0.5_r8)
+        timwt_soil(2) = 1._r8 - timwt_soil(1)
+
+    endif ! monthly
+
+    
+    if (TimeStep_old /= TimeStep(1)) then
+        write(iulog,*) 'TimeStep_old ',  TimeStep_old
+        write(iulog,*) 'timwt_soil(1) ',  timwt_soil(1)
+       call readSoilMoisture (kmo, kda, TimeStep)
+       TimeStep_old = TimeStep(1)
     end if
 
   end subroutine interpMonthlySoilMoisture
@@ -219,13 +331,13 @@ contains
 !-----------------------------------------------------------------------
 !BOP
 !
-! !IROUTINE: readMonthlySoilMoisture
+! !IROUTINE: readSoilMoisture
 !
 ! !INTERFACE:
-  subroutine readMonthlySoilMoisture (kmo, kda, months_soil)
+  subroutine readSoilMoisture (kmo, kda, months_soil)
 !
 ! !DESCRIPTION:
-! Read monthly soil moisture data for two consec. months.
+! Read monthly soil moisture data for two consec. months or days
 !
 ! !USES:
     use clmtype
@@ -268,13 +380,10 @@ contains
     real(r8), pointer :: mh2osoi_liq(:,:)  ! liquid soil water content read from input file
     real(r8), pointer :: mh2osoi_ice(:,:)  ! frozen soil water content read from input file
     real(r8), pointer :: arrayl(:)  ! temp local array
-    character(len=32) :: subname = 'readMonthlySoilMoisture'
+    character(len=32) :: subname = 'readSoilMoisture'
+    character(len=32) :: cTimeStep
 !-----------------------------------------------------------------------
 
-    
-
-  
-    
 
 
     ! Assign local pointers to derived subtypes components (landunit-level)
@@ -296,40 +405,45 @@ contains
        write(iulog,*)subname, 'allocation big error '; call endrun()
     end if
 
+
+    if (monthly) then
+      cTimeStep = 'month'
+    else
+      cTimeStep = 'day'
+    endif
+
     ! ----------------------------------------------------------------------
     ! Open monthly soil moisture file
     ! Read data from column
     ! ----------------------------------------------------------------------
     
     if (masterproc) then
-          write(iulog,*) 'Attempting to read monthly soil moisture data .....'
-          write(iulog,*) 'month = ',kmo,' day = ',kda
+      write(iulog,*) 'Attempting to read ', trim(cTimeStep), 'ly soil moisture data...'
+      write(iulog,*) 'month = ', kmo, ' day = ', kda
     endif ! masterproc
 
 
-    do k=1,2   !loop over months and read vegetated data
+    do k=1,2  ! loop over months/ days and read SM data
 
-      call getfil('/cluster/home03/uwis/mathause/data/SM_test_3D.nc', locfn, 0)
-      call ncd_pio_openfile (ncid, trim(locfn), 0)
+        ! get file
+        call getfil(trim(pSMfile), locfn, 0)
+        call ncd_pio_openfile (ncid, trim(locfn), 0)
 
 
-      if (masterproc) then
-        write(iulog,*) 'Before read '
-        write(iulog,*) size(mh2osoi_liq)
-      endif ! masterproc
+        if (masterproc) then
+            write(iulog,*) 'Before read '
+            write(iulog,*) trim(cTimeStep), '(k) ', months_soil(k)
+        endif ! masterproc
 
-        write(iulog,*) 'Before read '
-        write(iulog,*) 'month(k) ',months_soil(k)
 
         call ncd_io(ncid=ncid, varname='SOILLIQ', flag='read', data=mh2osoi_liq, dim1name=namec, &
           nt=months_soil(k), readvar=readvar)
-
-        if (.not. readvar) call endrun( trim(subname)//' ERROR: SOILLIQ NOT on pSM file' )
+        if (.not. readvar) call endrun(trim(subname) // ' ERROR: SOILLIQ NOT on pSMfile' // trim(pSMfile))
         
 
         call ncd_io(ncid=ncid, varname='SOILICE', flag='read', data=mh2osoi_ice, dim1name=namec, &
           nt=months_soil(k), readvar=readvar)
-        if (.not. readvar) call endrun( trim(subname)//' ERROR: SOILICE NOT on pSM file' )
+        if (.not. readvar) call endrun(trim(subname) // ' ERROR: SOILICE NOT on pSMfile ' // trim(pSMfile))
         
         
 
@@ -337,8 +451,8 @@ contains
 
       if (masterproc) then
           !call check_ret(nf90_close(ncid), subname)
-          write(iulog,*) 'Successfully read monthly soil moisture data for'
-          write(iulog,*) 'month ', months_soil(k)
+          write(iulog,*) 'Successfully read ',  trim(cTimeStep), 'ly soil moisture data for'
+          write(iulog,*) cTimeStep, ' ', months_soil(k)
           write(iulog,*)
       end if
 
@@ -346,25 +460,12 @@ contains
        ! store data directly in clmtype structure
        do c = begc,endc
           l = clandunit(c)
-
           if (ltype(l) == istsoil) then 
-             
              do j = 1, nlevgrnd
                 mh2osoi_liq2t(c,j,k) = mh2osoi_liq(c,j)
                 mh2osoi_ice2t(c,j,k) = mh2osoi_ice(c,j)
-
-                ! there seems to be a problem with mh2osoi_ice2t
-                if (mh2osoi_liq(c,j) < 0._r8) then
-                  write(iulog,*) 'ASSIGN LIQ ',j,c,k,mh2osoi_liq2t(c,j,k)
-                endif
-                if  (mh2osoi_ice(c,j) < 0._r8) then
-                  write(iulog,*) 'ASSIGN ICE2 ',j,c,k,mh2osoi_ice2t(c,j,k)
-                endif
-
-
              end do
           end if
-
        end do   ! end of loop over columns
 
     end do   ! end of loop over months
@@ -373,7 +474,7 @@ contains
 
     deallocate(mh2osoi_liq, mh2osoi_ice)
 
-  end subroutine readMonthlySoilMoisture
+  end subroutine readSoilMoisture
 
 
 
