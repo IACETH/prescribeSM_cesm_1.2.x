@@ -561,14 +561,6 @@ subroutine clm_drv(doalb, nextsw_cday, declinp1, declin, rstwr, nlend, rdate)
                      filter(nc)%num_nosnowc, filter(nc)%nosnowc)
      call t_stopf('hydro2')
 
-     ! MHJH
-     ! ============================================================================
-     ! Prescribe Soil Moisture
-     ! ============================================================================
-
-     call prescribeSoilMoisture(begc, endc, filter(nc)%num_nolakec, filter(nc)%nolakec)
-     ! MHJH
-
      ! ============================================================================
      ! Lake hydrology
      ! ============================================================================
@@ -630,6 +622,15 @@ subroutine clm_drv(doalb, nextsw_cday, declinp1, declin, rstwr, nlend, rdate)
                           doalb)
      end if
      call t_stopf('ecosysdyn')
+
+
+     ! MHJH
+     ! ============================================================================
+     ! Prescribe Soil Moisture
+     ! ============================================================================
+
+     call prescribeSoilMoisture(begc, endc, filter(nc)%num_nolakec, filter(nc)%nolakec)
+     ! MHJH
 
      ! Dry Deposition of chemical tracers (Wesely (1998) parameterizaion)
      call depvel_compute(begp,endp)
