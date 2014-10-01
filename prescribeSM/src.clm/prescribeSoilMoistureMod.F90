@@ -448,7 +448,7 @@ contains
         
 
       call ncd_pio_closefile(ncid)
-
+      ! write info to log
       if (masterproc) then
           !call check_ret(nf90_close(ncid), subname)
           write(iulog,*) 'Successfully read ',  trim(cTimeStep), 'ly soil moisture data for'
