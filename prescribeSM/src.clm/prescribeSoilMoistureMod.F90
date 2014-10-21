@@ -24,7 +24,7 @@ module prescribeSoilMoistureMod
 !
 
 ! !PRIVATE MEMBER FUNCTIONS:
-  private :: interpMonthlySoilMoisture   ! interpolate monthly SM data
+  private :: interpSoilMoisture   ! interpolate monthly SM data
   private :: readSoilMoisture     ! read SM data from file
 !
 
@@ -55,9 +55,18 @@ contains
   subroutine prescribeSoilMoisture(lbc,ubc, num_nolakec, filter_nolakec)
 !
 ! !DESCRIPTION:
-! 
-! 
-! 
+! loads SM from a netCDF file and overwrites the SM state
+! (SOILLIQ (mh2osoi_liq) and SOILICE (mh2osoi_ice)) of the
+! model
+! Needs a history file originally created by CLM4.0
+! add the following to the clm namelist:
+! hist_fincl2 = 'SOILLIQ','SOILICE'
+! hist_fincl3 = 'SOILLIQ','SOILICE'
+! hist_fincl4 = 'SOILLIQ','SOILICE'
+! hist_nhtfrq = 0, -24, -24, 0
+! hist_mfilt = 1, 365, 365, 1
+! hist_dov2xy = .true., .true., .false., .false.
+!
 !
 ! !USES:
     use clmtype
@@ -65,22 +74,21 @@ contains
     use clm_varpar, only : nlevgrnd
     use clm_varcon, only : istsoil
     use shr_infnan_mod, only : nan => shr_infnan_nan, assignment(=)
-!    use pftvarcon, only : noveg, ncorn, nbrdlf_dcd_brl_shrub
-!
+
 ! !ARGUMENTS:
     implicit none
     integer, intent(in) :: lbc, ubc                    ! column bounds
-
-
     integer, intent(in) :: num_nolakec                 ! number of column non-lake points in column filter
     integer, intent(in) :: filter_nolakec(ubc-lbc+1)   ! column filter for non-lake points
     integer, pointer    :: ltype(:)                    ! landunit type index
 
-!
+
 ! !CALLED FROM:
+! clm_driver
 !
 ! !REVISION HISTORY:
-! Author: 
+! Author: Mathias Hauser
+!
 ! !LOCAL VARIABLES:
 !
 ! local pointers to implicit in arguments
@@ -90,7 +98,6 @@ contains
 !
 ! local pointers to implicit out arguments
 !
-
     real(r8), pointer :: h2osoi_liq(:,:)     ! liquid soil water content level
     real(r8), pointer :: h2osoi_ice(:,:)     ! frozen soil water content level
 
@@ -99,14 +106,13 @@ contains
 ! !OTHER LOCAL VARIABLES:
 !EOP
 !
-
     integer :: fc,j,l,c         ! indices
-    integer :: begc,endc        ! beg and end local c index
+    integer :: begc,endc        ! beg and end local column index
     integer :: ier              ! error code
 !-----------------------------------------------------------------------
 
 
-    ! implicit inout arguments
+    ! implicit out arguments
     h2osoi_liq  => cws%h2osoi_liq
     h2osoi_ice  => cws%h2osoi_ice
 
@@ -114,11 +120,9 @@ contains
     clandunit   => col%landunit
     ltype       => lun%itype
 
-
     call get_proc_bounds(begc=begc,endc=endc)
     
     if (.not. allocated(mh2osoi_liq2t) .or. .not. allocated(mh2osoi_ice2t)) then
-
       allocate (mh2osoi_liq2t(begc:endc,1:nlevgrnd,2), &
                 mh2osoi_ice2t(begc:endc,1:nlevgrnd,2), stat=ier)
 
@@ -126,18 +130,17 @@ contains
          write(iulog,*) 'prescribeSoilMoistureMod allocation error'
       call endrun
       endif
-
       mh2osoi_liq2t(:,:,:) = nan
       mh2osoi_ice2t(:,:,:) = nan
-    
     endif
 
     ! get file name and monthly or daily
     call initPrescribeSoilMoisture ()
     ! get time weight and possibly a new time step
-    call interpMonthlySoilMoisture()
+    call interpSoilMoisture()
+    ! sets timwt_soil, mh2osoi_liq2t, mh2osoi_ice2t
 
-
+    ! overwrite the current soil water and ice content
     do fc = 1, num_nolakec
        c = filter_nolakec(fc)
        l = clandunit(c)
@@ -150,8 +153,6 @@ contains
     end do
 
   end subroutine prescribeSoilMoisture
-
-
 
 
 !-----------------------------------------------------------------------
@@ -167,7 +168,7 @@ contains
 ! goal -> use namlist
 !
 ! !USES:
-  use fileutils        , only : getfil, getavu, relavu
+  use fileutils,      only : getfil, getavu, relavu
 ! !ARGUMENTS:
     implicit none
 !
@@ -182,47 +183,40 @@ contains
     character(len=256) :: subname      ! name of routine
 !EOP
 
-	subname = 'initPrescribeSoilMoisture'
+    subname = 'initPrescribeSoilMoisture'
 
     ! Input datasets
-
     namelist /prescribe_sm/  &
          pSMfile, monthly
 
-
-
-
-    ! CAREFUL: IF YOU USE A DAILY pSMfile BUT SET monthly = .true.
-    ! THE MODEL WILL STILL RUN! 
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! CAREFUL: IF YOU USE A DAILY pSMfile BUT SET monthly = .true.  !
+    ! THE MODEL WILL STILL RUN!                                     !
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! pSMfile = '/cluster/home03/uwis/mathause/data/SM_in_3D_daily.nc'
     ! monthly = .false.
-
 
     call getfil(trim('prescribe_SM_nl'), locfn, 0)
     
     write(iulog,*) 'local file name: ', trim(locfn)
     
-
     unitn = getavu()
     
     write(iulog,*) 'Read in prescribe_sm namelist from: prescribe_SM_nl'
     
-    open( unitn, file=trim(locfn), status='old' )
+    open(unitn, file=trim(locfn), status='old')
     ierr = 1
-    do while ( ierr /= 0 )
+    do while (ierr /= 0)
         read(unitn, prescribe_sm, iostat=ierr)
         if (ierr < 0) then
-            call endrun( trim(subname)//' encountered end-of-file on clm_inparm read' )
+            call endrun(trim(subname)//' encountered end-of-file on prescribe_SM_nl read')
         endif
     end do
-    call relavu( unitn )
+    call relavu(unitn)
 
-
-    write(iulog,*) 'Read pSMfile from namelist', trim(pSMfile)
-    write(iulog,*) 'Read monthly from namelist', monthly
-
-
+    write(iulog,*) 'Read pSMfile from namelist:', trim(pSMfile)
+    write(iulog,*) 'Read monthly from namelist:', monthly
 
 
   end subroutine initPrescribeSoilMoisture
@@ -232,14 +226,14 @@ contains
 !-----------------------------------------------------------------------
 !BOP
 !
-! !IROUTINE: interpMonthlySoil
+! !IROUTINE: interpSoilMoisture
 !
 ! !INTERFACE:
-  subroutine interpMonthlySoilMoisture ()
+  subroutine interpSoilMoisture ()
 !
 ! !DESCRIPTION:
-! Determine if 2 new months of data are to be read.
-!
+! Determine if 2 new months or days of data are to be read.
+! if yes -> 
 ! !USES:
     use shr_kind_mod,     only : r8 => shr_kind_r8
     use clm_varctl,       only : fsurdat
@@ -250,6 +244,7 @@ contains
 !
 ! !REVISION HISTORY:
 ! Created by Ruth Lorenz
+! Mathias Hauser: added interpolation for daily SM input
 !
 !EOP
 !
@@ -264,11 +259,9 @@ contains
     integer :: TimeStep(2) ! months to be interpolated (1 to 12)
     integer :: doy         ! day of year (1..365)    
 
-
     real(r8) :: nsec = 86400._r8 ! num of sec per day
     integer, dimension(12) :: ndaypm = &
          (/31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31/) !days per month
-
     integer, dimension(12) :: cdaypm = &
         (/0,  31,  59,  90, 120, 151, 181, 212, 243, 273, 304, 334/) ! cumulative
         ! number of days per month
@@ -359,14 +352,14 @@ contains
 !
 ! !REVISION HISTORY:
 ! Created by Ruth Lorenz
-!
+! Mathias Hauser: Rewritten for CLM 1.2.1
 !
 ! !LOCAL VARIABLES:
 !EOP
-    character(len=256) :: locfn           ! local file name
     integer :: g,n,i,j,k,l,m,c            ! indices
-    integer , pointer :: clandunit(:)     ! column's landunit
-    integer , pointer :: ltype(:)         ! landunit type index
+    character(len=256) :: locfn           ! local file name
+    integer , pointer  :: clandunit(:)    ! column's landunit
+    integer , pointer  :: ltype(:)        ! landunit type index
     type(file_desc_t)  :: ncid            ! netcdf id
     integer :: dimid,varid                ! input netCDF id's
     integer :: ntim                       ! number of input data time samples
@@ -379,24 +372,18 @@ contains
 
     real(r8), pointer :: mh2osoi_liq(:,:)  ! liquid soil water content read from input file
     real(r8), pointer :: mh2osoi_ice(:,:)  ! frozen soil water content read from input file
-    real(r8), pointer :: arrayl(:)  ! temp local array
     character(len=32) :: subname = 'readSoilMoisture'
-    character(len=32) :: cTimeStep
+    character(len=32) :: cTimeStep ! string for the choosen time step (daily, monthly)
 !-----------------------------------------------------------------------
-
 
 
     ! Assign local pointers to derived subtypes components (landunit-level)
     ltype       => lun%itype
     ! Assign local pointers to derived subtypes components (column-level)
-    !clandunit       => clm3%g%l%c%landunit
     clandunit   => col%landunit
+    
     ! Determine necessary indices
-
-
     call get_proc_bounds(begc=begc,endc=endc)
-
-
 
     allocate(mh2osoi_liq(begc:endc,1:nlevgrnd), &
              mh2osoi_ice(begc:endc,1:nlevgrnd), stat=ier)
@@ -404,7 +391,6 @@ contains
     if (ier /= 0) then
        write(iulog,*)subname, 'allocation big error '; call endrun()
     end if
-
 
     if (monthly) then
       cTimeStep = 'month'
@@ -443,11 +429,10 @@ contains
 
         call ncd_io(ncid=ncid, varname='SOILICE', flag='read', data=mh2osoi_ice, dim1name=namec, &
           nt=months_soil(k), readvar=readvar)
-        if (.not. readvar) call endrun(trim(subname) // ' ERROR: SOILICE NOT on pSMfile ' // trim(pSMfile))
-        
-        
+        if (.not. readvar) call endrun(trim(subname) // ' ERROR: SOILICE NOT on pSMfile ' // trim(pSMfile))     
 
       call ncd_pio_closefile(ncid)
+
       ! write info to log
       if (masterproc) then
           !call check_ret(nf90_close(ncid), subname)
@@ -473,7 +458,6 @@ contains
     write(iulog,*) 'Successfully read soil moisture data'
 
     deallocate(mh2osoi_liq, mh2osoi_ice)
-
   end subroutine readSoilMoisture
 
 
