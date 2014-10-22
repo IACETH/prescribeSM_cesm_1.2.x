@@ -1,0 +1,15 @@
+&prescribe_sm
+ monthly = .false.
+ pSMfile = '/path/to/SM/file.nc'
+/
+# EXAMPLE Namelist to prescribe SM
+#
+# The model needs to find this file. Put it in the
+# run directory that clm uses.
+#
+# ! CAREFUL !
+# If you provide a daily data set and use monthly = .true.
+# it will still work. It just prescribes the values of the
+# first 12 days!
+#
+
