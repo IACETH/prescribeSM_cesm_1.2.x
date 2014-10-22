@@ -314,7 +314,7 @@ contains
        TimeStep_old = TimeStep(1)
     end if
 
-  end subroutine interpMonthlySoilMoisture
+  end subroutine interpSoilMoisture
 
 
 
