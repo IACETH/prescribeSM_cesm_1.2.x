@@ -14,6 +14,7 @@ module prescribeSoilMoistureMod
   use clm_varpar,      only : nlevgrnd
   use abortutils,      only : endrun
   use clm_varctl,      only : iulog
+  use spmdMod,         only : masterproc
 ! !PUBLIC TYPES:
   implicit none
   save
@@ -199,12 +200,13 @@ contains
 
     call getfil(trim('prescribe_SM_nl'), locfn, 0)
     
-    write(iulog,*) 'local file name: ', trim(locfn)
-    
+    if (masterproc) then
+      write(iulog,*) 'local file name: ', trim(locfn)
+      write(iulog,*) 'local file name: ', trim(locfn)
+    endif ! masterproc
+
     unitn = getavu()
-    
-    write(iulog,*) 'Read in prescribe_sm namelist from: prescribe_SM_nl'
-    
+   
     open(unitn, file=trim(locfn), status='old')
     ierr = 1
     do while (ierr /= 0)
@@ -215,8 +217,13 @@ contains
     end do
     call relavu(unitn)
 
-    write(iulog,*) 'Read pSMfile from namelist:', trim(pSMfile)
-    write(iulog,*) 'Read monthly from namelist:', monthly
+
+    if (masterproc) then
+      write(iulog,*) 'Read pSMfile from namelist:', trim(pSMfile)
+      write(iulog,*) 'Read monthly from namelist:', monthly
+    endif ! masterproc
+
+    
 
 
   end subroutine initPrescribeSoilMoisture
@@ -308,10 +315,12 @@ contains
 
     
     if (TimeStep_old /= TimeStep(1)) then
+      if (masterproc) then
         write(iulog,*) 'TimeStep_old ',  TimeStep_old
         write(iulog,*) 'timwt_soil(1) ',  timwt_soil(1)
-       call readSoilMoisture (kmo, kda, TimeStep)
-       TimeStep_old = TimeStep(1)
+      endif ! masterproc
+      call readSoilMoisture (kmo, kda, TimeStep)
+      TimeStep_old = TimeStep(1)
     end if
 
   end subroutine interpSoilMoisture
@@ -341,7 +350,7 @@ contains
     use clm_varpar,   only : nlevgrnd
     use clm_varcon,   only : istsoil
     use fileutils,    only : getfil
-    use spmdMod,      only : masterproc
+
     
 ! !ARGUMENTS:
     implicit none
@@ -454,8 +463,10 @@ contains
        end do   ! end of loop over columns
 
     end do   ! end of loop over months
-
-    write(iulog,*) 'Successfully read soil moisture data'
+    
+    if (masterproc) then
+      write(iulog,*) 'Successfully read soil moisture data'
+    endif ! masterproc
 
     deallocate(mh2osoi_liq, mh2osoi_ice)
   end subroutine readSoilMoisture
