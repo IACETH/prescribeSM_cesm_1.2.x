@@ -2,6 +2,7 @@
  monthly = .false.
  pSMfile = '/path/to/SM/file.nc'
 /
+
 # EXAMPLE Namelist to prescribe SM
 #
 # The model needs to find this file. Put it in the
