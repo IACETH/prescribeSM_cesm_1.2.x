@@ -289,7 +289,7 @@ contains
     end if
 
     if (masterproc) then
-      write(iulog,*) 'kyr, kmo, kda, ksec, ',  kyr, kmo, kda, ksec,
+      write(iulog,*) 'kyr, kmo, kda, ksec, ',  kyr, kmo, kda, ksec
 
     endif ! masterproc
 
