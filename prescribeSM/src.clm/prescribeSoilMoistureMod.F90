@@ -136,7 +136,7 @@ contains
       mh2osoi_ice2t(:,:,:) = nan
     endif
 
-    ! get file name and monthly or daily
+    ! get file name and 'monthly' or 'daily' from namelist (only once)
     if (FirstCall) then
       call initPrescribeSoilMoisture ()
       FirstCall = .false.
@@ -288,11 +288,6 @@ contains
        call get_curr_date(kyr, kmo, kda, ksec, offset=int(dtime))
     end if
 
-    if (masterproc) then
-      write(iulog,*) 'kyr, kmo, kda, ksec, ',  kyr, kmo, kda, ksec
-
-    endif ! masterproc
-
     if (monthly) then ! interpolate monthly data
 
         t = (kda-0.5_r8) / ndaypm(kmo)
@@ -326,10 +321,6 @@ contains
 
     
     if (TimeStep_old /= TimeStep(1)) then
-      if (masterproc) then
-        write(iulog,*) 'TimeStep_old ',  TimeStep_old
-        write(iulog,*) 'timwt_soil(1) ',  timwt_soil(1)
-      endif ! masterproc
       call readSoilMoisture (kmo, kda, TimeStep)
       TimeStep_old = TimeStep(1)
     end if
