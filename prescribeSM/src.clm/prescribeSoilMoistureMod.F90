@@ -107,9 +107,10 @@ contains
 ! !OTHER LOCAL VARIABLES:
 !EOP
 !
-    integer :: fc,j,l,c         ! indices
-    integer :: begc,endc        ! beg and end local column index
-    integer :: ier              ! error code
+    integer :: fc,j,l,c           ! indices
+    integer :: begc,endc          ! beg and end local column index
+    integer :: ier                ! error code
+    logical :: FirstCall = .true. ! make sure initPrescribeSoilMoisture is only called once
 !-----------------------------------------------------------------------
 
 
@@ -136,7 +137,11 @@ contains
     endif
 
     ! get file name and monthly or daily
-    call initPrescribeSoilMoisture ()
+    if (FirstCall) then
+      call initPrescribeSoilMoisture ()
+      FirstCall = .false.
+    end if ! FirstCall
+
     ! get time weight and possibly a new time step
     call interpSoilMoisture()
     ! sets timwt_soil, mh2osoi_liq2t, mh2osoi_ice2t
@@ -182,6 +187,7 @@ contains
     integer :: ierr                    
     character(len=256) :: locfn        ! local file name
     character(len=256) :: subname      ! name of routine
+
 !EOP
 
     subname = 'initPrescribeSoilMoisture'
@@ -281,6 +287,11 @@ contains
     else
        call get_curr_date(kyr, kmo, kda, ksec, offset=int(dtime))
     end if
+
+    if (masterproc) then
+      write(iulog,*) 'kyr, kmo, kda, ksec, ',  kyr, kmo, kda, ksec,
+
+    endif ! masterproc
 
     if (monthly) then ! interpolate monthly data
 
