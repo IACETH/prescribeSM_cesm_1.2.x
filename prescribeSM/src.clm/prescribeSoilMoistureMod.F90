@@ -147,14 +147,24 @@ contains
     ! sets timwt_soil, mh2osoi_liq2t, mh2osoi_ice2t
 
     ! overwrite the current soil water and ice content
+    ! only if SOILLIQ & SOILICE 
     do fc = 1, num_nolakec
        c = filter_nolakec(fc)
        l = clandunit(c)
        if (ltype(l) == istsoil) then
-        do j = 1, nlevgrnd
-             h2osoi_liq(c,j) = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
-             h2osoi_ice(c,j) = timwt_soil(1)*mh2osoi_ice2t(c,j,1) + timwt_soil(2)*mh2osoi_ice2t(c,j,2)
-        end do
+        ! Assign SOILLIQ
+        if (mh2osoi_liq2t(c,j,1) .ge. 0_r8) then
+          do j = 1, nlevgrnd
+               h2osoi_liq(c,j) = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
+          end do
+        end if
+        ! Assign SOILICCE
+        if (mh2osoi_ice2t(c,j,1) .ge. 0_r8) then
+          do j = 1, nlevgrnd
+               h2osoi_ice(c,j) = timwt_soil(1)*mh2osoi_ice2t(c,j,1) + timwt_soil(2)*mh2osoi_ice2t(c,j,2)
+          end do
+        end if
+
        end if
     end do
 
