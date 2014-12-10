@@ -36,8 +36,9 @@ module prescribeSoilMoistureMod
   real(r8), private, allocatable :: mh2osoi_liq2t(:,:,:) !  liquid soil water for interpolation (2 months) read fro m input files
   real(r8), private, allocatable :: mh2osoi_ice2t(:,:,:) !  frozen soil water for interpolation (2 months) read fro m input files
 
-  logical, private            :: monthly  ! if .true. -> monthly, else daily
-  character(len=256), private :: pSMfile  ! file name mit SM data to prescribe
+  logical, private            :: monthly     ! if .true. -> monthly, else daily
+  integer, private            :: pSMtype = 1 ! how to prescribe SM [default = 1] 
+  character(len=256), private :: pSMfile     ! file name mit SM data to prescribe
 
 ! !REVISION HISTORY:
 ! Created by 
@@ -111,6 +112,10 @@ contains
     integer :: begc,endc          ! beg and end local column index
     integer :: ier                ! error code
     logical :: FirstCall = .true. ! make sure initPrescribeSoilMoisture is only called once
+
+    ! special variables for pSMtype == 3
+    real(r8) :: frac              ! fraction of ice and liq present in soil
+    real(r8) :: SM                ! total SM for a timestep 
 !-----------------------------------------------------------------------
 
 
@@ -147,26 +152,70 @@ contains
     ! sets timwt_soil, mh2osoi_liq2t, mh2osoi_ice2t
 
     ! overwrite the current soil water and ice content
-    ! only if SOILLIQ & SOILICE 
-    do fc = 1, num_nolakec
-       c = filter_nolakec(fc)
-       l = clandunit(c)
-       if (ltype(l) == istsoil) then
-        ! Assign SOILLIQ
-        if (mh2osoi_liq2t(c,j,1) .ge. 0_r8) then
-          do j = 1, nlevgrnd
-               h2osoi_liq(c,j) = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
-          end do
-        end if
-        ! Assign SOILICCE
-        if (mh2osoi_ice2t(c,j,1) .ge. 0_r8) then
-          do j = 1, nlevgrnd
-               h2osoi_ice(c,j) = timwt_soil(1)*mh2osoi_ice2t(c,j,1) + timwt_soil(2)*mh2osoi_ice2t(c,j,2)
-          end do
-        end if
+    ! only if SOILLIQ & SOILICE are >= 0
 
-       end if
-    end do
+
+
+    if (pSMtype == 1) then
+
+      do fc = 1, num_nolakec
+        c = filter_nolakec(fc)
+        l = clandunit(c)
+        if (ltype(l) == istsoil) then
+          ! Assign SOILLIQ and SOILICE
+          do j = 1, nlevgrnd
+            if (mh2osoi_liq2t(c,j,1) .ge. 0_r8 .and. mh2osoi_ice2t(c,j,1) .ge. 0_r8 .and. mh2osoi_liq2t(c,j,2) .ge. 0_r8 .and. mh2osoi_ice2t(c,j,2) .ge. 0_r8) then
+              h2osoi_liq(c,j) = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
+              h2osoi_ice(c,j) = timwt_soil(1)*mh2osoi_ice2t(c,j,1) + timwt_soil(2)*mh2osoi_ice2t(c,j,2)
+            end if ! liq >= 0
+          end do ! j = 1, nlevgrnd
+        end if
+      end do ! fc = 1, num_nolakec
+
+    else if (pSMtype == 2) then
+     
+        do fc = 1, num_nolakec
+          c = filter_nolakec(fc)
+          l = clandunit(c)
+          if (ltype(l) == istsoil) then
+            ! Assign SOILLIQ
+            do j = 1, nlevgrnd
+              ! only overwrite liq if no ice is present
+              if (mh2osoi_liq2t(c,j,1) .ge. 0_r8 .and. mh2osoi_liq2t(c,j,2) .ge. 0_r8 .and. h2osoi_ice(c,j) == 0) then
+                h2osoi_liq(c,j) = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
+              end if
+            end do 
+          end if
+        end do
+
+    else if (pSMtype == 3) then
+    
+      do fc = 1, num_nolakec
+        c = filter_nolakec(fc)
+        l = clandunit(c)
+        if (ltype(l) == istsoil) then
+          ! Assign SOILLIQ and SOILICE
+          do j = 1, nlevgrnd
+            if (mh2osoi_liq2t(c,j,1) .ge. 0_r8 .and. mh2osoi_ice2t(c,j,1) .ge. 0_r8 .and. mh2osoi_liq2t(c,j,2) .ge. 0_r8 .and. mh2osoi_ice2t(c,j,2) .ge. 0_r8) then
+            
+              SM = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2) + timwt_soil(1)*mh2osoi_ice2t(c,j,1) + timwt_soil(2)*mh2osoi_ice2t(c,j,2)
+              
+              if (h2osoi_liq(c,j) + h2osoi_ice(c,j) .eq. 0) then
+                frac = 1 ! all to water
+              else
+                frac = h2osoi_liq(c,j) / (h2osoi_liq(c,j) + h2osoi_ice(c,j))
+              end if
+
+              h2osoi_liq(c,j) = frac*SM
+              h2osoi_ice(c,j) = (1 - frac) * SM
+
+            end if ! liq >= 0
+          end do ! j = 1, nlevgrnd
+        end if ! istsoil
+      end do ! fc = 1, num_nolakec
+
+    end if ! pSMtype
+
 
   end subroutine prescribeSoilMoisture
 
@@ -181,7 +230,7 @@ contains
 !
 ! !DESCRIPTION:
 ! Set monthly or daily SM, define file with SM data
-! goal -> use namlist
+! goal -> use namelist
 !
 ! !USES:
   use fileutils,      only : getfil, getavu, relavu
@@ -194,7 +243,8 @@ contains
 !
 ! !LOCAL VARIABLES:
     integer :: unitn
-    integer :: ierr                    
+    integer :: ierr 
+    ! character(len=256) :: type_name    ! name of prescribe                   
     character(len=256) :: locfn        ! local file name
     character(len=256) :: subname      ! name of routine
 
@@ -204,7 +254,7 @@ contains
 
     ! Input datasets
     namelist /prescribe_sm/  &
-         pSMfile, monthly
+         pSMfile, monthly, pSMtype
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! CAREFUL: IF YOU USE A DAILY pSMfile BUT SET monthly = .true.  !
@@ -217,7 +267,6 @@ contains
     call getfil(trim('prescribe_SM_nl'), locfn, 0)
     
     if (masterproc) then
-      write(iulog,*) 'local file name: ', trim(locfn)
       write(iulog,*) 'local file name: ', trim(locfn)
     endif ! masterproc
 
@@ -237,6 +286,37 @@ contains
     if (masterproc) then
       write(iulog,*) 'Read pSMfile from namelist:', trim(pSMfile)
       write(iulog,*) 'Read monthly from namelist:', monthly
+      
+      write(iulog,*) 'Read pSMtype from namelist:', pSMtype
+
+      if (pSMtype == 1) then
+        write(iulog,*) 'pSMtype: prescribe both (DEFAULT)'
+        write(iulog,*) 'SOILICE AND SOILLIQ is prescribed, whatever the conditions'
+        write(iulog,*) 'for any gridcell, level, timestep where LIQ !OR! ICE is < 0,'
+        write(iulog,*) 'neither is prescribed (if only one is prescribed it yields unphysical values).'
+
+      else if (pSMtype == 2) then
+        write(iulog,*) 'pSMtype: SOILLIQ if no SOILICE'
+        write(iulog,*) 'ONLY SOILLIQ is prescribed. SOILICE is calculated.'
+        write(iulog,*) '-> can NOT prescribe SOILICE (is calculated interactively)'
+        write(iulog,*) '-> if SOILICE is PRESENT -> SOILLIQ is INTERACTIVE'
+      
+      else if (pSMtype == 3) then
+        write(iulog,*) 'pSMtype: FRACTION'
+        write(iulog,*) 'At every timestep the sotal SM (SOILLIQ + SOILICE) is'
+        write(iulog,*) 'prescribed. The fraction that becomes SOILLIQ and '
+        write(iulog,*) 'SOILICE. Is determined by the current ICE and LIQ '
+        write(iulog,*) 'fraction.'
+        write(iulog,*) 'fr = SOILLIQ^n / (SOILLIQ^n + SOILICE^n), where n = TimeStep'
+        write(iulog,*) 'SOILLIQ^n+1 = fr * (ICE + LIQ)'
+        write(iulog,*) 'SOILICE^n+1 = (1 - fr) * (ICE + LIQ)'
+        write(iulog,*) 'where LIQ and ICE are read from the file'
+
+      else
+        call endrun(trim(subname)//'pSMtype namelist option must be one of 1, 2,3!')
+      endif ! pSMtype
+
+
     endif ! masterproc
 
     
@@ -316,7 +396,7 @@ contains
         ! fraction of day that has passed
         t = ksec / nsec
 
-        ! if t < 0.5 we need 'doy -1' and 'doy'
+        ! if t < 0.5 we need 'doy - 1' and 'doy'
         ! else we need 'doy' and 'doy + 1'
         TimeStep(1) = doy + floor(t - 0.5)
         TimeStep(2) = doy + floor(t + 0.5)
@@ -377,7 +457,7 @@ contains
 !
 ! !LOCAL VARIABLES:
 !EOP
-    integer :: g,n,i,j,k,l,m,c            ! indices
+    integer :: n,j,k,l,m,c                ! indices
     character(len=256) :: locfn           ! local file name
     integer , pointer  :: clandunit(:)    ! column's landunit
     integer , pointer  :: ltype(:)        ! landunit type index
