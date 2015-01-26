@@ -40,19 +40,22 @@ Example namelist for output::
 
 Installation
 ------------
-  - add the 3 source files in the SourceMod/src.clm folder and build cesm normally
+- add the 3 source files in the SourceMod/src.clm folder and build cesm normally
 
 Usage
 -----
-  - if you set SOILLIQ or SOILICE to -1 at a gridpoint, LIQ and ICE are calculated interactively at this point!
-  - this can be used to prescribe SM only regionally
-  - to prescribe SM only at certain time steps may not work with the current implementation
+- if you set SOILLIQ or SOILICE to -1 at a gridpoint, LIQ and ICE are calculated interactively at this point!
+- this can be used to prescribe SM only regionally
+- to prescribe SM only at certain time steps may not work with the current implementation
 
 .. NOTE::
   CLM does not provide a sensible result if you prescribe only *one* of SOILLIQ/ SOILICE.
   
-  - add the namelist called *&prescribe_SM* to a file called *prescribe_SM_nl* to the run folder of the simulation (RUNDIR in env_run.xml)
-  - see also the example namelist provided
+- add the namelist called *&prescribe_SM* to a file called *prescribe_SM_nl* to the run folder of the simulation (RUNDIR in env_run.xml)
+- see also the example namelist provided
+
+Namelist
+^^^^^^^^
   
 pSMfile : string
   path to the history file containing SOILLIQ and SOILICE
