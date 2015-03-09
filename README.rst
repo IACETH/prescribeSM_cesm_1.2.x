@@ -40,9 +40,9 @@ Example namelist for output::
 
 Installation
 ------------
-- Get the code with:
-- git clone https://github.com/mathause/prescribeSM_cesm_1.2.x prescribeSM
-- add the 3 source files in the SourceMod/src.clm folder and build cesm normally
+Get the code with:
+``git clone https://github.com/mathause/prescribeSM_cesm_1.2.x prescribeSM``
+Then add the 3 source files in the SourceMod/src.clm folder and build cesm normally.
 
 Usage
 -----
@@ -50,7 +50,7 @@ Usage
 - this can be used to prescribe SM only regionally
 - to prescribe SM only at certain time steps may not work with the current implementation
 
-.. NOTE::
+..NOTE::
   CLM does not provide a sensible result if you prescribe only *one* of SOILLIQ/ SOILICE.
   
 - add the namelist called *&prescribe_SM* to a file called *prescribe_SM_nl* to the run folder of the simulation (RUNDIR in env_run.xml)
