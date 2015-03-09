@@ -40,6 +40,8 @@ Example namelist for output::
 
 Installation
 ------------
+- Get the code with:
+- git clone https://github.com/mathause/prescribeSM_cesm_1.2.x prescribeSM
 - add the 3 source files in the SourceMod/src.clm folder and build cesm normally
 
 Usage
