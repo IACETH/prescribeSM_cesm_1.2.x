@@ -1,6 +1,7 @@
 &prescribe_sm
  monthly = .false.
  pSMfile = '/path/to/SM/file.nc'
+ pSMtype = 1
 /
 
 # EXAMPLE Namelist to prescribe SM
@@ -17,4 +18,10 @@
 # it will still work. It just prescribes the values of the
 # first 12 days!
 #
-
+#
+#pSMfile : string
+#    path to the history file containing SOILLIQ and SOILICE
+#monthly : bool
+#    If .true. assumes monthly mean SM is provided. If false uses daily input.
+#pSMtype : int, {1, 2, 3}
+#    Defines how to prescribe SM. 1: default: prescribe SOILLIQ and SOILICE. 2: prescribe SM only if there is no SOILICE present (never prescribes SOILICE). Lets the model decide if there is ICE or not at a certain gridpoint. 3: yields no physically sensible output.
