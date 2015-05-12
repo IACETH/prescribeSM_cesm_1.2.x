@@ -7,7 +7,12 @@
 # USAGE: CONVERT clm history files in xy-format (lat, lon) to col format
 
 
-import netCDF4 as nc
+try:
+	import netCDF4 as nc
+except: # netCDF4 is not available on cscs
+	import scipy.io.netcdf as nc
+	nc.Dataset = nc.netcdf_file
+
 import shutil
 
 
@@ -45,7 +50,7 @@ with nc.Dataset(fN_xy) as ncf:
     SOILICE_xy = ncf.variables['SOILICE'][:, 0:10, :, :]
 
 # write out the transformed SM
-with nc.Dataset(fN_col_out, 'r+') as ncf:
+with nc.Dataset(fN_col_out, 'a') as ncf:
     ncf.variables['SOILLIQ'][:, 0:10, sel_soil] = SOILLIQ_xy[:, :, row, col]
     ncf.variables['SOILICE'][:, 0:10, sel_soil] = SOILICE_xy[:, :, row, col]
 
