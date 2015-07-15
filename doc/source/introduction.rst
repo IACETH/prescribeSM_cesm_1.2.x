@@ -1,29 +1,27 @@
 Introduction
 ============
 
-prescribeSM_CESM_1.2.x allows to prescribe SOILLIQ and SOILICE in CLM 4.0 for CESM 1.2.x.
+``prescribeSM_CESM_1.2.x`` allows to prescribe ``SOILLIQ`` and ``SOILICE`` in CLM 4.0 for CESM 1.2.x.
 
-The code is originally by Ruth Lorenz (with the help of Dave Lawrence) and has be adapted by me.
+The code is originally by Ruth Lorenz (with the help of Dave Lawrence) and has been adapted by me for CESM 1.2.1.
 
 Features
 --------
 
-- Prescribe SOILLIQ and SOILICE (-> SM)
+- Prescribe ``SOILLIQ`` and ``SOILICE`` (-> SM) in CLM
 - Prescribe SM globally or regionally
-- Prescribe daily mean or monthly mean SM
+- Prescribe daily mean or monthly mean SM (linear interpolation in between)
 - Two ways to do this:
 
-  - Prescribe SOILLIQ *and* SOILICE (standard)
-  - Prescribe SOILLIQ only if no SOILICE is present
+  - Prescribe ``SOILLIQ`` *and* ``SOILICE`` (standard)
+  - Prescribe ``SOILLIQ`` only if no ``SOILICE`` is present
   
 - Define used Inputfile via namelist
-
 
 Procedure
 ---------
 
-- Compile CESM/ CLM with the changed 
+- :doc:`Compile CESM/ CLM</compile>` with the changed source files
 - Prepare the :doc:`Soil Moisture forcing </SMforcing>` 
-- Save namelist
+- Create the :doc:`namelist` and put it in the `run` directory
 - Run the model 
-- 

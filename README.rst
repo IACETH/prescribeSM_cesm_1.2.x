@@ -16,6 +16,11 @@ Features
   
 - Define used Inputfile via namelist
 
+Documentation
+-------------
+
+You can find documentation on http://prescribesm-cesm-12x.readthedocs.org/
+
 Prerequisites
 -------------
 - CLM 4.0 history file with the variables SOILLIQ and SOILICE

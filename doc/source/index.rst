@@ -12,8 +12,10 @@ Contents:
    :maxdepth: 2
    
    introduction
+   compile
    SMforcing
-
+   namelist
+   additional
 
 Indices and tables
 ==================
