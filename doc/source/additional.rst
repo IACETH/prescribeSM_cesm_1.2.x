@@ -5,7 +5,7 @@ Additional Info
 
 Source Files
 ------------
-The tree changed source files are:
+The three changed source files are:
 
 - :file:`prescribeSoilMoistureMod.F90`
 - :file:`clm_driver.F90`

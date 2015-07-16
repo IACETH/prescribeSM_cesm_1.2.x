@@ -4,7 +4,7 @@ Soil Moisture Forcing
 The forcing dataset is a netCDF file with the variables ``SOILICE`` and ``SOILLIQ`` on it.
 The variables are not in the usual lat/lon format (named :term:`4D`) but in an indexed format (named :term:`3D`).
 
-The file must have 12 (365) time steps on it to prescribe SM monthly (daily). 
+The file must have 12 (365) time steps on it to prescribe SM monthly (daily) means. 
 
 Regional Forcing
 ----------------
