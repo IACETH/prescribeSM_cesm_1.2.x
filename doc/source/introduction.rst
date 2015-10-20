@@ -3,7 +3,10 @@ Introduction
 
 ``prescribeSM_CESM_1.2.x`` allows to prescribe ``SOILLIQ`` and ``SOILICE`` in CLM 4.0 for CESM 1.2.x.
 
-The code is originally by Ruth Lorenz (with the help of Dave Lawrence) and has been adapted by me for CESM 1.2.1.
+The code is originally by Ruth Lorenz (with the help of Dave Lawrence) and has been adapted by me for CESM 1.2.1 and CESM 1.2.2.
+
+.. NOTE::
+      The code of ``clm_driver`` and ``BalanceCheckMod`` are identical in 1.2.1 and 1.2.2.
 
 Features
 --------
