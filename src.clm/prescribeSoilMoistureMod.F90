@@ -214,22 +214,39 @@
               ! check if there is runoff
               if (qflx_surf(c) .gt. 0._r8) then
                 ! Determine missing soil_liquid (sum over all levels)
+                SMdeficit = 0._r8
                 do j = 1, nlevgrnd
-                  SMdeficit = 0._r8
                   ! only overwrite liq if no ice is present
                   if (h2osoi_ice(c,j) == 0._r8) then
                     ! desired h2osoi_liq content
                     SM = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
                     SMdeficit = SMdeficit + max(0._r8, h2osoi_liq(c,j) - SM)
+
+if (SMdeficit .gt. 5000) then
+
+  if (masterproc) then
+    write(iulog,*) 'SMdeficit is HUGE',  SMdeficit
+    write(iulog,*) 'SM',  SM
+    write(iulog,*) 'timwt_soil(1)',  timwt_soil(1)
+    write(iulog,*) 'timwt_soil(2)',  timwt_soil(2)
+    write(iulog,*) 'mh2osoi_liq2t(c,j,1)',  mh2osoi_liq2t(c,j,1)
+    write(iulog,*) 'mh2osoi_liq2t(c,j,2)',  mh2osoi_liq2t(c,j,2)
+    write(iulog,*) 'h2osoi_liq(c,j)',  h2osoi_liq(c,j)
+  end if
+
+end if
+
+
                   end if
                 end do
+                ! water needed? (0.001 for numerical issues)
+                if (SMdeficit .gt. 0.001_r8) then
+
   if (masterproc) then
     write(iulog,*) 'SMdeficit ',  SMdeficit
   end if
-                ! water needed?
-                if (SMdeficit .gt. 0._r8) then
                   ! fraction of water that can be replenished
-                  frac = min(1, SMdeficit / (qflx_surf(c) * dtime))
+                  frac = min(1._r8, SMdeficit / (qflx_surf(c) * dtime))
 
   if (masterproc) then
     write(iulog,*) 'frac ',  frac
