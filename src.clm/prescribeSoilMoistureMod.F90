@@ -246,7 +246,7 @@ end if
     write(iulog,*) 'SMdeficit ',  SMdeficit
   end if
                   ! fraction of water that can be replenished
-                  frac = min(1._r8, SMdeficit / (qflx_surf(c) * dtime))
+                  frac = min(1._r8, (qflx_surf(c) * dtime) / SMdeficit)
 
   if (masterproc) then
     write(iulog,*) 'frac ',  frac
