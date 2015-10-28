@@ -38,10 +38,10 @@
     real(r8), private, allocatable :: mh2osoi_liq2t(:,:,:) !  liquid soil water for interpolation (2 months) read from input files
     real(r8), private, allocatable :: mh2osoi_ice2t(:,:,:) !  frozen soil water for interpolation (2 months) read from input files
 
-    logical, private            :: monthly     ! if .true. -> monthly, else daily
-    integer, private            :: pSMtype = 1 ! how to prescribe SM [default = 1] 
-    character(len=256), private :: pSMfile     ! file name mit SM data to prescribe
-
+    logical, private            :: monthly       ! if .true. -> monthly, else daily
+    integer, private            :: pSMtype = 1   ! how to prescribe SM [default = 1] 
+    character(len=256), private :: pSMfile       ! file name mit SM data to prescribe
+    real(r8), private           :: nudge = 1._r8 ! nudging
 
 
 
@@ -169,6 +169,8 @@
       ! overwrite the current soil water and ice content
       ! only if SOILLIQ & SOILICE are >= 0
 
+      ! CLASSICAL: prescribe SOILLIQ and SOILICE
+      ! NOW INCLUDES NUDGING
       if (pSMtype == 1) then
 
         do fc = 1, num_nolakec
@@ -178,13 +180,14 @@
             ! Assign SOILLIQ and SOILICE
             do j = 1, nlevgrnd
               if (mh2osoi_liq2t(c,j,1) .ge. 0_r8 .and. mh2osoi_ice2t(c,j,1) .ge. 0_r8 .and. mh2osoi_liq2t(c,j,2) .ge. 0_r8 .and. mh2osoi_ice2t(c,j,2) .ge. 0_r8) then
-                h2osoi_liq(c,j) = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
-                h2osoi_ice(c,j) = timwt_soil(1)*mh2osoi_ice2t(c,j,1) + timwt_soil(2)*mh2osoi_ice2t(c,j,2)
+                h2osoi_liq(c,j) = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2) * nudge + (1._r8 - nudge) * h2osoi_liq(c,j)
+                h2osoi_ice(c,j) = timwt_soil(1)*mh2osoi_ice2t(c,j,1) + timwt_soil(2)*mh2osoi_ice2t(c,j,2) * nudge + (1._r8 - nudge) * h2osoi_ice(c,j)
               end if ! liq >= 0
             end do ! j = 1, nlevgrnd
           end if
         end do ! fc = 1, num_nolakec
 
+      ! PRESCRIBE SOILLIQ if SOILICE == 0
       else if (pSMtype == 2) then
        
           do fc = 1, num_nolakec
@@ -201,6 +204,7 @@
             end if
           end do
 
+      ! USE only water from qflx_surf (surface runoff)
       else if (pSMtype == 3) then
         dtime = get_step_size()
         ! THIS FILTER MAY BE WRONG
@@ -221,22 +225,6 @@
                     ! desired h2osoi_liq content
                     SM = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
                     SMdeficit = SMdeficit + max(0._r8, h2osoi_liq(c,j) - SM)
-
-if (SMdeficit .gt. 5000) then
-
-  if (masterproc) then
-    write(iulog,*) 'SMdeficit is HUGE',  SMdeficit
-    write(iulog,*) 'SM',  SM
-    write(iulog,*) 'timwt_soil(1)',  timwt_soil(1)
-    write(iulog,*) 'timwt_soil(2)',  timwt_soil(2)
-    write(iulog,*) 'mh2osoi_liq2t(c,j,1)',  mh2osoi_liq2t(c,j,1)
-    write(iulog,*) 'mh2osoi_liq2t(c,j,2)',  mh2osoi_liq2t(c,j,2)
-    write(iulog,*) 'h2osoi_liq(c,j)',  h2osoi_liq(c,j)
-  end if
-
-end if
-
-
                   end if
                 end do
                 ! water needed? (0.001 for numerical issues)
@@ -274,6 +262,25 @@ end if
               end if ! qflx_surf(c) .gt. 0._r8
             end if ! istsoil
           end do ! num_nolacec
+
+      ! ONLY PRESCRIBE IF LESS THAN 
+      else if (pSMtype == 4) then
+
+        do fc = 1, num_nolakec
+          c = filter_nolakec(fc)
+          l = clandunit(c)
+          if (ltype(l) == istsoil) then
+            ! Assign SOILLIQ and SOILICE
+            do j = 1, nlevgrnd
+              if (mh2osoi_liq2t(c,j,1) .ge. 0_r8 .and. mh2osoi_ice2t(c,j,1) .ge. 0_r8 .and. mh2osoi_liq2t(c,j,2) .ge. 0_r8 .and. mh2osoi_ice2t(c,j,2) .ge. 0_r8) then
+                h2osoi_liq(c,j) = max(timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2), h2osoi_liq(c,j))
+                h2osoi_ice(c,j) = max(timwt_soil(1)*mh2osoi_ice2t(c,j,1) + timwt_soil(2)*mh2osoi_ice2t(c,j,2), h2osoi_ice(c,j))
+              end if ! liq >= 0
+            end do ! j = 1, nlevgrnd
+          end if
+        end do ! fc = 1, num_nolakec
+
+
       end if ! pSMtype
 
 
@@ -316,7 +323,7 @@ end if
 
       ! Input datasets
       namelist /prescribe_sm/  &
-           pSMfile, monthly, pSMtype
+           pSMfile, monthly, pSMtype, nudge
 
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       ! CAREFUL: IF YOU USE A DAILY pSMfile BUT SET monthly = .true.  !
@@ -345,8 +352,12 @@ end if
       if (masterproc) then
         write(iulog,*) 'Read pSMfile from namelist:', trim(pSMfile)
         write(iulog,*) 'Read monthly from namelist:', monthly
-        
         write(iulog,*) 'Read pSMtype from namelist:', pSMtype
+        write(iulog,*) 'Read nudge from namelist:', nudge
+      
+        if (nudge .lt. 0._r8 .or. nudge .gt. 1._r8)
+          call endrun(trim(subname)//'nudge must be in 0..1!')
+        end if
 
         if (pSMtype == 1) then
           write(iulog,*) 'pSMtype: prescribe both (DEFAULT)'
@@ -372,7 +383,7 @@ end if
           ! write(iulog,*) 'where LIQ and ICE are read from the file'
 
         else
-          call endrun(trim(subname)//'pSMtype namelist option must be one of 1, 2,3!')
+          !call endrun(trim(subname)//'pSMtype namelist option must be one of 1, 2,3!')
         endif ! pSMtype
 
 
