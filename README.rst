@@ -1,6 +1,10 @@
 prescribeSM CESM 1.2.x
 ======================
 
+.. image:: https://readthedocs.org/projects/prescribesm-cesm-12x/badge/?version=latest
+  :target: http://prescribesm-cesm-12x.readthedocs.org/en/latest/?badge=latest
+  :alt: Documentation Status
+
 *prescribeSM_CESM_1.2.x* allows to prescribe SOILLIQ and SOILICE in CLM 4.0 for CESM 1.2.x.
 
 Features
