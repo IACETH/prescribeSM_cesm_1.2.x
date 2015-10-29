@@ -330,7 +330,7 @@
                   frac = min(1._r8, (qflx_surf(c) * dtime) / SMdeficit)
                   ! try to do everything with q_over, else use wa
                   if (frac .lt. 1._r8) then
-                    frac_wa = min(1._r8, wa(c) / (SMdeficit - (qflx_surf(c) * dtime))
+                    frac_wa = min(1._r8, wa(c) / (SMdeficit - (qflx_surf(c) * dtime)))
                   else
                     frac_wa = 0._r8
                   end if
@@ -442,7 +442,7 @@
         write(iulog,*) 'Read pSMtype from namelist:', pSMtype
         write(iulog,*) 'Read nudge from namelist:', nudge
       
-        if (nudge .lt. 0._r8 .or. nudge .gt. 1._r8)
+        if (nudge .lt. 0._r8 .or. nudge .gt. 1._r8) then
           call endrun(trim(subname)//'nudge must be in 0..1!')
         end if
 
