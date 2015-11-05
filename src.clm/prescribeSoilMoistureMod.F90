@@ -11,7 +11,7 @@
   ! USES
 
     use shr_kind_mod,     only : r8 => shr_kind_r8
-    use clm_varpar,       only : nlevgrnd
+    use clm_varpar, only       : nlevgrnd, nlevsoi
     use abortutils,       only : endrun
     use clm_varcon,       only : istsoil, watmin
     use clm_varctl,       only : iulog
@@ -78,8 +78,8 @@
   !
   ! !USES:
       use clmtype
+      use shr_const_mod      , only : SHR_CONST_TKFRZ
       use decompMod,  only : get_proc_bounds
-      use clm_varpar, only : nlevgrnd, nlevsoi
       use shr_infnan_mod, only : nan => shr_infnan_nan, assignment(=)
 
   ! !ARGUMENTS:
@@ -101,8 +101,10 @@
   ! local pointers to implicit in arguments
   !
     integer , pointer :: clandunit(:) ! column's landunit
+    real(r8), pointer :: t_soisno(:,:)  ! soil temperature (Kelvin)
 
   ! local pointers to implicit inout arguments
+    real(r8), pointer :: qflx_irrig(:)    ! irrigation flux (mm H2O /s)
     real(r8), pointer :: qflx_surf(:)     ! surface runoff (mm H2O /s)
     real(r8), pointer :: qflx_runoff(:)   ! total runoff (qflx_drain+qflx_surf+qflx_qrgwl) (mm H2O /s)
     real(r8), pointer :: wa(:)             !water in the unconfined aquifer (mm)
@@ -127,6 +129,8 @@
       real(r8) :: frac_wa
       real(r8) :: SM                ! total SM for a timestep 
       real(r8) :: SMdeficit         ! missing SM per column
+      real(r8) :: SMassigned         ! missing SM per column
+      logical  :: frozen_soil       ! soil is frozen
   !-----------------------------------------------------------------------
 
 
@@ -135,11 +139,13 @@
       h2osoi_ice  => cws%h2osoi_ice
       
       ! implicit inout arguments
+      qflx_irrig        => cwf%qflx_irrig
       qflx_surf         => cwf%qflx_surf
       qflx_runoff       => cwf%qflx_runoff
       wa                => cws%wa
 
       ! implicit in arguments
+      t_soisno    => ces%t_soisno
       clandunit   => col%landunit
       ltype       => lun%itype
 
@@ -216,61 +222,124 @@
 
 ! ===========================================================================================================================================================================
 
-      ! USE only water from qflx_surf (surface runoff)
+      ! USE only water from qflx_surf to PRESCRIBE SM
       else if (pSMtype == 3) then
+        do fc = 1, num_nolakec
+          c = filter_nolakec(fc)
+          l = clandunit(c)
+          if (ltype(l) == istsoil) then
 
-        ! THIS FILTER MAY BE WRONG
-          do fc = 1, num_nolakec
-            c = filter_nolakec(fc)
-            l = clandunit(c)
-            if (ltype(l) == istsoil) then
-              ! check if there is runoff
-              if (qflx_surf(c) .gt. 0._r8) then
-                ! Determine missing soil_liquid (sum over all levels)
-                SMdeficit = 0._r8
-                do j = 1, nlevsoi
-                  ! only overwrite liq if no ice is present
-                  if (h2osoi_ice(c,j) == 0._r8) then
-                    ! desired h2osoi_liq content
-                    SM = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
-                    SMdeficit = SMdeficit + max(0._r8, SM - h2osoi_liq(c,j))
-                  end if
-                end do
-                ! water needed? (0.001 for numerical issues)
-                if (SMdeficit .gt. 0.001_r8) then
-
-  if (masterproc) then
-    write(iulog,*) 'SMdeficit ',  SMdeficit
-  end if
-                  ! fraction of water that can be replenished
-                  frac = min(1._r8, (qflx_surf(c) * dtime) / SMdeficit)
-
-  if (masterproc) then
-    write(iulog,*) 'frac ',  frac
-  end if
-                  do j = 1, nlevsoi
-                    ! only overwrite liq if no ice is present
-                    if (h2osoi_ice(c,j) == 0._r8) then
-                      ! desired h2osoi_liq content
-                      SM = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
-                      ! SMdeficit (per level)
-                      h2osoi_liq(c,j) = h2osoi_liq(c,j) + frac * max(0._r8, SM - h2osoi_liq(c,j))
-                    end if
-                  end do
-                  ! subtract used water from surface and total runoff
-  if (masterproc) then
-    write(iulog,*) 'qflx_surf(c) ',  qflx_surf(c)
-  end if
-                  qflx_surf(c) = max(qflx_surf(c) - frac * SMdeficit / dtime, 0._r8)
-
-  if (masterproc) then
-    write(iulog,*) 'qflx_surf(c) ',  qflx_surf(c)
-  end if
-                  qflx_runoff(c) = max(qflx_runoff(c) - frac * SMdeficit / dtime, 0_r8)
+            if (masterproc) then
+                write(iulog,*) '-----------------------------'
+                write(iulog,*) 'Start New Gridpoint'
+            end if
+            
+            do j = 1, nlevsoi
+              
+              ! check if soil is frozen 
+              ! (if layer 3 is frozen, only accumulate deficit for layer 1 & 2)
+              if (t_soisno(c,j) <= SHR_CONST_TKFRZ) then
+                if (masterproc) then
+                  write(iulog,*) 'there is ice on level: ', j
                 end if
-              end if ! qflx_surf(c) .gt. 0._r8
-            end if ! istsoil
-          end do ! num_nolacec
+
+                exit
+              end if
+
+              ! desired SM state at this level
+              SM = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
+              
+              ! SMdeficit
+              SMdeficit = max(SM - h2osoi_liq(c,j), 0._r8)
+              
+              ! how much can we add?
+              SMassigned = min(qflx_surf(c) * dtime, SMdeficit)
+
+              ! add water
+              h2osoi_liq(c,j) = h2osoi_liq(c,j) + SMassigned
+
+              ! subtract from runoff (protect from rounding errors)
+              qflx_surf(c) = max(qflx_surf(c) - SMassigned / dtime, 0._r8)
+              qflx_runoff(c) = max(qflx_runoff(c) - SMassigned / dtime, 0._r8)
+
+              if (masterproc) then
+                write(iulog,*) 'Level: ', j, 'SMdeficit: ', SMdeficit, 'SMassigned: ', SMassigned
+              end if
+
+
+
+              ! check if water is available
+              if (qflx_surf(c) .eq. 0._r8) then
+                if (masterproc) then
+                  write(iulog,*) 'there is no more water on level: ', j
+                end if
+
+                exit
+              end if              
+
+            end do ! j = 1, nlevgrnd
+            ! restrict the irrigation to the surface runoff of this time step
+
+            if (masterproc) then
+              write(iulog,*) 'qflx_irrig(c) ',  qflx_irrig(c)
+              write(iulog,*) 'qflx_surf(c) ',  qflx_surf(c)
+            end if
+
+          end if
+        end do ! fc = 1, num_nolakec
+
+  !       ! THIS FILTER MAY BE WRONG
+  !         do fc = 1, num_nolakec
+  !           c = filter_nolakec(fc)
+  !           l = clandunit(c)
+  !           if (ltype(l) == istsoil) then
+  !             ! check if there is runoff
+  !             if (qflx_surf(c) .gt. 0._r8) then
+  !               ! Determine missing soil_liquid (sum over all levels)
+  !               SMdeficit = 0._r8
+  !               do j = 1, nlevsoi
+  !                 ! only overwrite liq if no ice is present
+  !                 if (h2osoi_ice(c,j) == 0._r8) then
+  !                   ! desired h2osoi_liq content
+  !                   SM = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
+  !                   SMdeficit = SMdeficit + max(0._r8, SM - h2osoi_liq(c,j))
+  !                 end if
+  !               end do
+  !               ! water needed? (0.001 for numerical issues)
+  !               if (SMdeficit .gt. 0.001_r8) then
+
+  ! if (masterproc) then
+  !   write(iulog,*) 'SMdeficit ',  SMdeficit
+  ! end if
+  !                 ! fraction of water that can be replenished
+  !                 frac = min(1._r8, (qflx_surf(c) * dtime) / SMdeficit)
+
+  ! if (masterproc) then
+  !   write(iulog,*) 'frac ',  frac
+  ! end if
+  !                 do j = 1, nlevsoi
+  !                   ! only overwrite liq if no ice is present
+  !                   if (h2osoi_ice(c,j) == 0._r8) then
+  !                     ! desired h2osoi_liq content
+  !                     SM = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
+  !                     ! SMdeficit (per level)
+  !                     h2osoi_liq(c,j) = h2osoi_liq(c,j) + frac * max(0._r8, SM - h2osoi_liq(c,j))
+  !                   end if
+  !                 end do
+  !                 ! subtract used water from surface and total runoff
+  ! if (masterproc) then
+  !   write(iulog,*) 'qflx_surf(c) ',  qflx_surf(c)
+  ! end if
+  !                 qflx_surf(c) = max(qflx_surf(c) - frac * SMdeficit / dtime, 0._r8)
+
+  ! if (masterproc) then
+  !   write(iulog,*) 'qflx_surf(c) ',  qflx_surf(c)
+  ! end if
+  !                 qflx_runoff(c) = max(qflx_runoff(c) - frac * SMdeficit / dtime, 0_r8)
+  !               end if
+  !             end if ! qflx_surf(c) .gt. 0._r8
+  !           end if ! istsoil
+  !         end do ! num_nolacec
 
 ! ===========================================================================================================================================================================
 
@@ -283,7 +352,7 @@
           if (ltype(l) == istsoil) then
             ! Assign SOILLIQ and SOILICE
             do j = 1, nlevsoi
-              if (mh2osoi_liq2t(c,j,1) .ge. 0_r8 .and. mh2osoi_ice2t(c,j,1) .ge. 0_r8 .and. mh2osoi_liq2t(c,j,2) .ge. 0_r8 .and. mh2osoi_ice2t(c,j,2) .ge. 0_r8) then
+              if (mh2osoi_liq2t(c,j,1) .ge. 0._r8 .and. mh2osoi_ice2t(c,j,1) .ge. 0._r8 .and. mh2osoi_liq2t(c,j,2) .ge. 0._r8 .and. mh2osoi_ice2t(c,j,2) .ge. 0._r8) then
                 h2osoi_liq(c,j) = max(timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2), h2osoi_liq(c,j))
                 h2osoi_ice(c,j) = max(timwt_soil(1)*mh2osoi_ice2t(c,j,1) + timwt_soil(2)*mh2osoi_ice2t(c,j,2), h2osoi_ice(c,j))
               end if ! liq >= 0
@@ -363,6 +432,61 @@
             end if ! istsoil
           end do ! num_nolacec
 
+! ===========================================================================================================================================================================
+
+
+      ! IRRIGATION 
+      ! we use the runoff from this time step and add it to the prec flux
+      ! (avoiding interception) at the ground in the next timestep
+
+      else if (pSMtype == 6) then
+
+        do fc = 1, num_nolakec
+          c = filter_nolakec(fc)
+          l = clandunit(c)
+          if (ltype(l) == istsoil) then
+            ! make sure irrigation is not carried over
+            qflx_irrig(c) = 0._r8
+
+
+            ! determine irrigation flux
+            do j = 1, nlevsoi
+              
+              ! check if soil is frozen 
+              ! (if layer 3 is frozen, only accumulate deficit for layer 1 & 2)
+              if (t_soisno(c,j) <= SHR_CONST_TKFRZ) then
+
+                if (masterproc) then
+                  write(iulog,*) 'there is ice on level: ', j
+                end if
+
+                exit
+              end if
+
+              ! desired SM state at this level
+              SM = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
+              
+              ! desired irrigation
+              qflx_irrig(c) = qflx_irrig(c) + max(SM - h2osoi_liq(c,j), 0._r8) / dtime
+                
+
+            end do ! j = 1, nlevgrnd
+            ! restrict the irrigation to the surface runoff of this time step
+
+            if (masterproc) then
+              write(iulog,*) 'qflx_irrig(c) ',  qflx_irrig(c)
+              write(iulog,*) 'qflx_surf(c) ',  qflx_surf(c)
+            end if
+
+            ! restrict irrigation to available water
+            qflx_irrig(c) = max(qflx_surf(c), qflx_irrig(c))
+
+            ! correct the two runoff terms
+            qflx_surf(c) = qflx_surf(c) - qflx_irrig(c)
+            qflx_runoff(c) = qflx_runoff(c) - qflx_irrig(c)
+
+          end if
+        end do ! fc = 1, num_nolakec
 
 
       end if ! pSMtype

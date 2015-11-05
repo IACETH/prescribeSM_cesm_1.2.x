@@ -546,9 +546,13 @@ contains
        endif   ! istice_mec
 
        qflx_runoff(c) = qflx_drain(c) + qflx_surf(c) + qflx_qrgwl(c)
-       if (ityplun(l)==istsoil .and. col%wtgcell(c) > 0.0_r8 ) then
-          qflx_runoff(c) = qflx_runoff(c) - qflx_irrig(c)
-       end if
+
+       ! MHJH TURN OFF SUBTRACTION OF qflx_irrig
+       ! if (ityplun(l)==istsoil .and. col%wtgcell(c) > 0.0_r8 ) then
+       !    qflx_runoff(c) = qflx_runoff(c) - qflx_irrig(c)
+       ! end if
+       ! MHJH
+       
        if (ityplun(l)==isturb) then
          qflx_runoff_u(c) = qflx_runoff(c)
        else if (ityplun(l)==istsoil .or. ityplun(l)==istcrop) then
