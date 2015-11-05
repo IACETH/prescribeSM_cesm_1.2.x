@@ -78,8 +78,9 @@
   !
   ! !USES:
       use clmtype
-      use shr_const_mod      , only : SHR_CONST_TKFRZ
-      use decompMod,  only : get_proc_bounds
+      use shr_const_mod,  only : SHR_CONST_TKFRZ
+      use decompMod,      only : get_proc_bounds
+      use clm_varcon,     only : spval
       use shr_infnan_mod, only : nan => shr_infnan_nan, assignment(=)
 
   ! !ARGUMENTS:
@@ -168,6 +169,9 @@
       if (FirstCall) then
         call initPrescribeSoilMoisture ()
         FirstCall = .false.
+
+        ! make sure irrig is 0 (and not nan)
+        qflx_irrig(:) = 0._r8
       end if ! FirstCall
 
       ! get time weight and possibly a new time step
@@ -228,64 +232,66 @@
           c = filter_nolakec(fc)
           l = clandunit(c)
           if (ltype(l) == istsoil) then
-
-            if (masterproc) then
-                write(iulog,*) '-----------------------------'
-                write(iulog,*) 'Start New Gridpoint'
-            end if
-            
-            do j = 1, nlevsoi
+            if (qflx_surf(c) .gt. 0._r8 .and. qflx_surf(c) /= spval) then
+              if (masterproc) then
+                  write(iulog,*) '-----------------------------'
+                  write(iulog,*) 'Start New Gridpoint'
+                  write(iulog,*) 'Max water, qflx_surf(c) * dtime: ', qflx_surf(c) * dtime
+              end if
+                        
+              do j = 1, nlevsoi
               
-              ! check if soil is frozen 
-              ! (if layer 3 is frozen, only accumulate deficit for layer 1 & 2)
-              if (t_soisno(c,j) <= SHR_CONST_TKFRZ) then
-                if (masterproc) then
-                  write(iulog,*) 'there is ice on level: ', j
+                ! check if soil is frozen 
+                ! (if layer 3 is frozen, only accumulate deficit for layer 1 & 2)
+                if (t_soisno(c,j) <= SHR_CONST_TKFRZ) then
+                  if (masterproc) then
+                    write(iulog,*) 'there is ice on level: ', j
+                  end if
+
+                  exit
                 end if
 
-                exit
-              end if
+                ! desired SM state at this level
+                SM = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
+                
+                ! SMdeficit
+                SMdeficit = max(SM - h2osoi_liq(c,j), 0._r8)
+                
+                ! how much can we add?
+                SMassigned = min(qflx_surf(c) * dtime, SMdeficit)
 
-              ! desired SM state at this level
-              SM = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
-              
-              ! SMdeficit
-              SMdeficit = max(SM - h2osoi_liq(c,j), 0._r8)
-              
-              ! how much can we add?
-              SMassigned = min(qflx_surf(c) * dtime, SMdeficit)
+                ! add water
+                h2osoi_liq(c,j) = h2osoi_liq(c,j) + SMassigned
 
-              ! add water
-              h2osoi_liq(c,j) = h2osoi_liq(c,j) + SMassigned
+                ! subtract from runoff (protect from rounding errors)
+                qflx_surf(c) = max(qflx_surf(c) - SMassigned / dtime, 0._r8)
+                qflx_runoff(c) = max(qflx_runoff(c) - SMassigned / dtime, 0._r8)
 
-              ! subtract from runoff (protect from rounding errors)
-              qflx_surf(c) = max(qflx_surf(c) - SMassigned / dtime, 0._r8)
-              qflx_runoff(c) = max(qflx_runoff(c) - SMassigned / dtime, 0._r8)
+                if (masterproc) then
+                  write(iulog,*) 'Level: ', j, 'SMdeficit: ', SMdeficit, 'SMassigned: ', SMassigned
+                end if
+
+
+
+                ! check if water is available
+                if (qflx_surf(c) .eq. 0._r8) then
+                  if (masterproc) then
+                    write(iulog,*) 'there is no more water on level: ', j
+                  end if
+
+                  exit
+                end if              
+
+              end do ! j = 1, nlevgrnd
+              ! restrict the irrigation to the surface runoff of this time step
 
               if (masterproc) then
-                write(iulog,*) 'Level: ', j, 'SMdeficit: ', SMdeficit, 'SMassigned: ', SMassigned
+                write(iulog,*) 'qflx_irrig(c) ',  qflx_irrig(c)
+                write(iulog,*) 'qflx_surf(c) ',  qflx_surf(c)
               end if
 
-
-
-              ! check if water is available
-              if (qflx_surf(c) .eq. 0._r8) then
-                if (masterproc) then
-                  write(iulog,*) 'there is no more water on level: ', j
-                end if
-
-                exit
-              end if              
-
-            end do ! j = 1, nlevgrnd
-            ! restrict the irrigation to the surface runoff of this time step
-
-            if (masterproc) then
-              write(iulog,*) 'qflx_irrig(c) ',  qflx_irrig(c)
-              write(iulog,*) 'qflx_surf(c) ',  qflx_surf(c)
-            end if
-
-          end if
+            end if ! not spval and > 0
+          end if ! istsoil
         end do ! fc = 1, num_nolakec
 
   !       ! THIS FILTER MAY BE WRONG
@@ -445,47 +451,49 @@
           c = filter_nolakec(fc)
           l = clandunit(c)
           if (ltype(l) == istsoil) then
+
             ! make sure irrigation is not carried over
             qflx_irrig(c) = 0._r8
+            if (qflx_surf(c) .gt. 0._r8 .and. qflx_surf(c) /= spval) then
 
+              ! determine irrigation flux
+              do j = 1, nlevsoi
+                
+                ! check if soil is frozen 
+                ! (if layer 3 is frozen, only accumulate deficit for layer 1 & 2)
+                if (t_soisno(c,j) <= SHR_CONST_TKFRZ) then
 
-            ! determine irrigation flux
-            do j = 1, nlevsoi
-              
-              ! check if soil is frozen 
-              ! (if layer 3 is frozen, only accumulate deficit for layer 1 & 2)
-              if (t_soisno(c,j) <= SHR_CONST_TKFRZ) then
+                  if (masterproc) then
+                    write(iulog,*) 'there is ice on level: ', j
+                  end if
 
-                if (masterproc) then
-                  write(iulog,*) 'there is ice on level: ', j
+                  exit
                 end if
 
-                exit
+                ! desired SM state at this level
+                SM = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
+                
+                ! desired irrigation
+                qflx_irrig(c) = qflx_irrig(c) + max(SM - h2osoi_liq(c,j), 0._r8) / dtime
+                  
+
+              end do ! j = 1, nlevgrnd
+              ! restrict the irrigation to the surface runoff of this time step
+
+              if (masterproc) then
+                write(iulog,*) 'qflx_irrig(c) ',  qflx_irrig(c)
+                write(iulog,*) 'qflx_surf(c) ',  qflx_surf(c)
               end if
 
-              ! desired SM state at this level
-              SM = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
-              
-              ! desired irrigation
-              qflx_irrig(c) = qflx_irrig(c) + max(SM - h2osoi_liq(c,j), 0._r8) / dtime
-                
+              ! restrict irrigation to available water
+              qflx_irrig(c) = max(qflx_surf(c), qflx_irrig(c))
 
-            end do ! j = 1, nlevgrnd
-            ! restrict the irrigation to the surface runoff of this time step
+              ! correct the two runoff terms
+              qflx_surf(c) = qflx_surf(c) - qflx_irrig(c)
+              qflx_runoff(c) = qflx_runoff(c) - qflx_irrig(c)
 
-            if (masterproc) then
-              write(iulog,*) 'qflx_irrig(c) ',  qflx_irrig(c)
-              write(iulog,*) 'qflx_surf(c) ',  qflx_surf(c)
-            end if
-
-            ! restrict irrigation to available water
-            qflx_irrig(c) = max(qflx_surf(c), qflx_irrig(c))
-
-            ! correct the two runoff terms
-            qflx_surf(c) = qflx_surf(c) - qflx_irrig(c)
-            qflx_runoff(c) = qflx_runoff(c) - qflx_irrig(c)
-
-          end if
+            end if ! gt 0 and not spval
+          end if ! istsoil
         end do ! fc = 1, num_nolakec
 
 
