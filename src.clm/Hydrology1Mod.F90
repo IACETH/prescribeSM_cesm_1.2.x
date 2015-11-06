@@ -53,12 +53,12 @@ contains
     use clm_atmlnd   , only : clm_a2l
     use clm_varcon   , only : tfrz, istice, istwet, istsoil, istice_mec, isturb, &
                               icol_roof, icol_sunwall, icol_shadewall
-    use clm_varcon   , only : istcrop
+    use clm_varcon   , only : istcrop, spval
     use FracWetMod   , only : FracWet
     use clm_time_manager , only : get_step_size
     use subgridAveMod, only : p2c
     use SNICARMod    , only : snw_rds_min
-
+    use shr_infnan_mod, only : nan => shr_infnan_nan, assignment(=)
 !
 ! !ARGUMENTS:
     implicit none
@@ -361,8 +361,10 @@ contains
        !    qflx_irrig(c)         = irrig_rate(c)
        !    n_irrig_steps_left(c) = n_irrig_steps_left(c) - 1
        ! else
-       !    qflx_irrig(c) = 0._r8
-       ! end if
+       
+       if (qflx_irrig(c) .eq. nan) then
+           qflx_irrig(c) = 0._r8
+       end if
        ! MHJH TURN OFF OVERWRITING OF qflx_irrig
 
        ! Add irrigation water directly onto ground (bypassing canopy interception)
