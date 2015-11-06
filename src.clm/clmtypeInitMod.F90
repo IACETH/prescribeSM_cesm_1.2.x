@@ -3209,7 +3209,7 @@ contains
     cwf%flx_dst_dep(beg:end) = nan
     cwf%qflx_snofrz_lyr(beg:end,-nlevsno+1:0) = spval
     cwf%qflx_snofrz_col(beg:end) = nan
-    cwf%qflx_irrig(beg:end)  = nan
+    cwf%qflx_irrig(beg:end)  = 0._r8
     cwf%qflx_glcice(beg:end) = nan
     cwf%qflx_glcice_frz(beg:end) = nan
     cwf%qflx_glcice_melt(beg:end) = nan
