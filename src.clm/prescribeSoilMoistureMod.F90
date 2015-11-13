@@ -129,7 +129,9 @@
 
 
       real(r8) :: frac        ! fraction
-      real(r8) :: SM          ! total SM for a timestep
+      real(r8) :: SL          ! total SOILLIQ for a timestep
+      real(r8) :: SI          ! total SOILICE for a timestep
+      real(r8) :: SM          ! total SOILMOISTURE (= SL + SI) for a timestep
       real(r8) :: water_avail ! available runoff
       real(r8) :: SMdeficit   ! missing SM per column
       real(r8) :: SMassigned  ! missing SM per column
@@ -200,9 +202,16 @@
           if (ltype(l) == istsoil) then
             ! Assign SOILLIQ and SOILICE
             do j = levstart, levstop
-              if (mh2osoi_liq2t(c,j,1) .ge. 0_r8 .and. mh2osoi_ice2t(c,j,1) .ge. 0_r8 .and. mh2osoi_liq2t(c,j,2) .ge. 0_r8 .and. mh2osoi_ice2t(c,j,2) .ge. 0_r8) then
-                h2osoi_liq(c,j) = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2) * nudge + (1._r8 - nudge) * h2osoi_liq(c,j)
-                h2osoi_ice(c,j) = timwt_soil(1)*mh2osoi_ice2t(c,j,1) + timwt_soil(2)*mh2osoi_ice2t(c,j,2) * nudge + (1._r8 - nudge) * h2osoi_ice(c,j)
+              ! only prescribe if all SL and SI values are >= 0
+              if min(mh2osoi_liq2t(c,j,1), mh2osoi_ice2t(c,j,1), mh2osoi_liq2t(c,j,2), mh2osoi_ice2t(c,j,2)) .ge. 0_r8) then
+
+                ! obtain desired SL and SI at this timestep
+                SL = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
+                SI = timwt_soil(1)*mh2osoi_ice2t(c,j,1) + timwt_soil(2)*mh2osoi_ice2t(c,j,2)
+
+                ! including nudging
+                h2osoi_liq(c,j) = SL * nudge + (1._r8 - nudge) * h2osoi_liq(c,j)
+                h2osoi_ice(c,j) = SI * nudge + (1._r8 - nudge) * h2osoi_ice(c,j)
               end if ! liq >= 0
             end do ! j = 1, nlevgrnd
           end if
@@ -210,26 +219,42 @@
 
 ! ===========================================================================================================================================================================
 
-      ! PRESCRIBE SOILLIQ if SOILICE == 0
+      ! PRESCRIBE SM if T_SOIL > 273.15
       else if (pSMtype == 2) then
        
-          do fc = 1, num_nolakec
-            c = filter_nolakec(fc)
-            l = clandunit(c)
-            if (ltype(l) == istsoil) then
-              ! Assign SOILLIQ
-              do j = levstart, levstop
-                ! only overwrite liq if no ice is present
-                if (mh2osoi_liq2t(c,j,1) .ge. 0_r8 .and. mh2osoi_liq2t(c,j,2) .ge. 0_r8 .and. h2osoi_ice(c,j) == 0) then
-                  h2osoi_liq(c,j) = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
-                end if
-              end do 
-            end if
-          end do
+        do fc = 1, num_nolakec
+          c = filter_nolakec(fc)
+          l = clandunit(c)
+          if (ltype(l) == istsoil) then
+            do j = levstart, levstop
+
+              ! check if soil is frozen 
+              ! (if layer 3 is frozen, only accumulate deficit for layer 1 & 2)
+              ! only overwrite liq if no ice is present
+              if (t_soisno(c,j) <= SHR_CONST_TKFRZ) then
+                exit ! leave do j = levstart, levstop
+              end if
+              
+              ! only prescribe if all SL and SI values are >= 0
+              if min(mh2osoi_liq2t(c,j,1), mh2osoi_ice2t(c,j,1), mh2osoi_liq2t(c,j,2), mh2osoi_ice2t(c,j,2)) .ge. 0_r8) then
+
+                ! obtain desired SL and SI at this timestep
+                SL = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
+                SI = timwt_soil(1)*mh2osoi_ice2t(c,j,1) + timwt_soil(2)*mh2osoi_ice2t(c,j,2)
+
+                ! prescribe total water (at places where there is no more soil ice)
+                SM = SL + SI
+
+                ! including nudging (important to avoid jumps)
+                h2osoi_liq(c,j) = SM * nudge + (1._r8 - nudge) * h2osoi_liq(c,j)
+              end if
+            end do 
+          end if
+        end do
 
 ! ===========================================================================================================================================================================
 
-      ! USE only water from qflx_surf to PRESCRIBE SM
+      ! USE only water from qflx_surf and maybe qflx_drai to PRESCRIBE SM
       else if (pSMtype == 3) then
 
         do fc = 1, num_nolakec
@@ -242,7 +267,7 @@
               water_avail = (qflx_surf(c) + qflx_drain(c)) * dtime
             else
               ! total available water (ignoring qflx_qrgwl)
-              water_avail = qflx_surf(c) * dtime
+              water_avail = (qflx_surf(c)) * dtime
             end if
 
             ! water available?
@@ -270,9 +295,12 @@
                 end if
 
                 ! desired SM state at this level
-                SM = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
-                
-                ! TODO ADD SOILICE?
+                ! obtain desired SL and SI at this timestep
+                SL = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
+                SI = timwt_soil(1)*mh2osoi_ice2t(c,j,1) + timwt_soil(2)*mh2osoi_ice2t(c,j,2)
+
+                ! prescribe total water (important at places where there is no more soil ice)
+                SM = SL + SI
 
                 ! SMdeficit
                 SMdeficit = max(SM - h2osoi_liq(c,j), 0._r8)
@@ -331,9 +359,18 @@
           if (ltype(l) == istsoil) then
             ! Assign SOILLIQ and SOILICE
             do j = levstart, levstop
-              if (mh2osoi_liq2t(c,j,1) .ge. 0._r8 .and. mh2osoi_ice2t(c,j,1) .ge. 0._r8 .and. mh2osoi_liq2t(c,j,2) .ge. 0._r8 .and. mh2osoi_ice2t(c,j,2) .ge. 0._r8) then
-                h2osoi_liq(c,j) = max(timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2), h2osoi_liq(c,j))
-                h2osoi_ice(c,j) = max(timwt_soil(1)*mh2osoi_ice2t(c,j,1) + timwt_soil(2)*mh2osoi_ice2t(c,j,2), h2osoi_ice(c,j))
+
+              ! only prescribe if all SL and SI values are >= 0
+              if min(mh2osoi_liq2t(c,j,1), mh2osoi_ice2t(c,j,1), mh2osoi_liq2t(c,j,2), mh2osoi_ice2t(c,j,2)) .ge. 0_r8) then
+              
+                ! desired SM state at this level
+                ! obtain desired SL and SI at this timestep
+                SL = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
+                SI = timwt_soil(1)*mh2osoi_ice2t(c,j,1) + timwt_soil(2)*mh2osoi_ice2t(c,j,2)
+
+                ! ONLY PRESCRIBE IF LESS THAN
+                h2osoi_liq(c,j) = max(SL, h2osoi_liq(c,j))
+                h2osoi_ice(c,j) = max(SI, h2osoi_ice(c,j))
               end if ! liq >= 0
             end do ! j = 1, nlevgrnd
           end if
@@ -344,9 +381,8 @@
       ! USE only water from qflx_surf and qflx_drain (sub- and surface runoff) 
 
       else if (pSMtype == 5) then
+
         call endrun(trim(subname)//' pSMtype 5 does not exist')
-
-
 
 ! ===========================================================================================================================================================================
 
@@ -356,6 +392,7 @@
       ! (avoiding interception) at the ground in the next timestep
 
       else if (pSMtype == 6) then
+
         call endrun(trim(subname)//' something is wrong with pSMtype 6 (dont know what)')
 
         do fc = 1, num_nolakec
