@@ -203,7 +203,7 @@
             ! Assign SOILLIQ and SOILICE
             do j = levstart, levstop
               ! only prescribe if all SL and SI values are >= 0
-              if min(mh2osoi_liq2t(c,j,1), mh2osoi_ice2t(c,j,1), mh2osoi_liq2t(c,j,2), mh2osoi_ice2t(c,j,2)) .ge. 0_r8) then
+              if (min(mh2osoi_liq2t(c,j,1), mh2osoi_ice2t(c,j,1), mh2osoi_liq2t(c,j,2), mh2osoi_ice2t(c,j,2)) .ge. 0_r8) then
 
                 ! obtain desired SL and SI at this timestep
                 SL = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
@@ -236,7 +236,7 @@
               end if
               
               ! only prescribe if all SL and SI values are >= 0
-              if min(mh2osoi_liq2t(c,j,1), mh2osoi_ice2t(c,j,1), mh2osoi_liq2t(c,j,2), mh2osoi_ice2t(c,j,2)) .ge. 0_r8) then
+              if (min(mh2osoi_liq2t(c,j,1), mh2osoi_ice2t(c,j,1), mh2osoi_liq2t(c,j,2), mh2osoi_ice2t(c,j,2)) .ge. 0_r8) then
 
                 ! obtain desired SL and SI at this timestep
                 SL = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
@@ -294,8 +294,7 @@
                   exit ! leave do j = levstart, levstop
                 end if
 
-                ! desired SM state at this level
-                ! obtain desired SL and SI at this timestep
+                ! obtain desired SL and SI
                 SL = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
                 SI = timwt_soil(1)*mh2osoi_ice2t(c,j,1) + timwt_soil(2)*mh2osoi_ice2t(c,j,2)
 
@@ -361,7 +360,7 @@
             do j = levstart, levstop
 
               ! only prescribe if all SL and SI values are >= 0
-              if min(mh2osoi_liq2t(c,j,1), mh2osoi_ice2t(c,j,1), mh2osoi_liq2t(c,j,2), mh2osoi_ice2t(c,j,2)) .ge. 0_r8) then
+              if (min(mh2osoi_liq2t(c,j,1), mh2osoi_ice2t(c,j,1), mh2osoi_liq2t(c,j,2), mh2osoi_ice2t(c,j,2)) .ge. 0_r8) then
               
                 ! desired SM state at this level
                 ! obtain desired SL and SI at this timestep
@@ -382,7 +381,7 @@
 
       else if (pSMtype == 5) then
 
-        call endrun(trim(subname)//' pSMtype 5 does not exist')
+        call endrun('initPrescribeSoilMoisture: pSMtype 5 does not exist')
 
 ! ===========================================================================================================================================================================
 
@@ -393,7 +392,7 @@
 
       else if (pSMtype == 6) then
 
-        call endrun(trim(subname)//' something is wrong with pSMtype 6 (dont know what)')
+        call endrun('initPrescribeSoilMoisture something is wrong with pSMtype 6 (dont know what)')
 
         do fc = 1, num_nolakec
           c = filter_nolakec(fc)
