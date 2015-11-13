@@ -39,12 +39,12 @@
     real(r8), private, allocatable :: mh2osoi_liq2t(:,:,:) !  liquid soil water for interpolation (2 months) read from input files
     real(r8), private, allocatable :: mh2osoi_ice2t(:,:,:) !  frozen soil water for interpolation (2 months) read from input files
 
-    logical, private            :: monthly       ! if .true. -> monthly, else daily
-    integer, private            :: pSMtype = 1   ! how to prescribe SM [default = 1] 
-    character(len=256), private :: pSMfile       ! file name mit SM data to prescribe
-    real(r8), private           :: nudge = 1._r8 ! nudging
-
-
+    logical, private            :: monthly          ! if .true. -> monthly, else daily
+    integer, private            :: pSMtype = 1      ! how to prescribe SM [default = 1] 
+    character(len=256), private :: pSMfile          ! file name mit SM data to prescribe
+    real(r8), private           :: nudge = 1._r8    ! nudging
+    integer, private            :: levstart = 1     ! start level prescribing SM
+    integer, private            :: levstop = nlevsoi ! end level prescribing SM
 
   ! !REVISION HISTORY:
   ! Created by 
@@ -239,7 +239,7 @@
                   write(iulog,*) 'Max water, qflx_surf(c) * dtime: ', qflx_surf(c) * dtime
               end if
                         
-              do j = 1, nlevsoi
+              do j = levstart, levstop
               
                 ! check if soil is frozen 
                 ! (if layer 3 is frozen, only accumulate deficit for layer 1 & 2)
@@ -539,7 +539,7 @@
 
       ! Input datasets
       namelist /prescribe_sm/  &
-           pSMfile, monthly, pSMtype, nudge
+           pSMfile, monthly, pSMtype, nudge, levstart, levstop
 
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       ! CAREFUL: IF YOU USE A DAILY pSMfile BUT SET monthly = .true.  !
@@ -570,10 +570,29 @@
         write(iulog,*) 'Read monthly from namelist:', monthly
         write(iulog,*) 'Read pSMtype from namelist:', pSMtype
         write(iulog,*) 'Read nudge from namelist:', nudge
+        write(iulog,*) 'Read levstart from namelist:', levstart
+        write(iulog,*) 'Read levstop from namelist:', levstop
       
         if (nudge .lt. 0._r8 .or. nudge .gt. 1._r8) then
           call endrun(trim(subname)//'nudge must be in 0..1!')
         end if
+
+
+        if (levstart .gt. levstop) then
+          call endrun(trim(subname)//'levstop must be bigger than levend')
+        end if
+
+        if (max(levstart,  levstop) .gt. nlevsoi) then
+          call endrun(trim(subname)//'levstop/ start must not exceed nlevsoi (10)')
+        end if
+
+        if (min(levstart,  levstop) .lt. 1) then
+          call endrun(trim(subname)//'levstop/ start must not be smaller than 1')
+        end if
+
+
+
+
 
         if (pSMtype == 1) then
           write(iulog,*) 'pSMtype: prescribe both (DEFAULT)'
