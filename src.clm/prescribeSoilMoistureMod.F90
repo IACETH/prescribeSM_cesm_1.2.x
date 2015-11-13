@@ -40,8 +40,8 @@
     real(r8), private, allocatable :: mh2osoi_ice2t(:,:,:) !  frozen soil water for interpolation (2 months) read from input files
 
     logical, private            :: monthly            ! if .true. -> monthly, else daily
-    integer, private            :: pSMtype = 1        ! how to prescribe SM [default = 1] 
     character(len=256), private :: pSMfile            ! file name mit SM data to prescribe
+    integer, private            :: pSMtype = 1        ! how to prescribe SM [default = 1] 
     real(r8), private           :: nudge = 1._r8      ! nudging
     integer, private            :: levstart = 1       ! start level prescribing SM
     integer, private            :: levstop = nlevsoi  ! end level prescribing SM
@@ -79,7 +79,7 @@
   !
   ! !USES:
       use clmtype
-      use shr_const_mod,  only : SHR_CONST_TKFRZ
+      use shr_const_mod,  only : SHR_CONST_TKFRZ ! freezing temperature of water
       use decompMod,      only : get_proc_bounds
       use clm_varcon,     only : spval
       use shr_infnan_mod, only : nan => shr_infnan_nan, assignment(=)
@@ -127,14 +127,13 @@
       integer :: ier                ! error code
       logical :: FirstCall = .true. ! make sure initPrescribeSoilMoisture is only called once
 
-      ! special variables for pSMtype == 3
-      real(r8) :: frac              ! fraction of liq present from q_over
-      real(r8) :: frac_wa
-      real(r8) :: SM                ! total SM for a timestep
-      real(r8) :: water_avail      ! available runoff
-      real(r8) :: SMdeficit         ! missing SM per column
-      real(r8) :: SMassigned        ! missing SM per column
-      ! logical  :: frozen_soil       ! soil is frozen
+
+      real(r8) :: frac        ! fraction
+      real(r8) :: SM          ! total SM for a timestep
+      real(r8) :: water_avail ! available runoff
+      real(r8) :: SMdeficit   ! missing SM per column
+      real(r8) :: SMassigned  ! missing SM per column
+
   !-----------------------------------------------------------------------
 
 
@@ -200,7 +199,7 @@
           l = clandunit(c)
           if (ltype(l) == istsoil) then
             ! Assign SOILLIQ and SOILICE
-            do j = 1, nlevsoi
+            do j = levstart, levstop
               if (mh2osoi_liq2t(c,j,1) .ge. 0_r8 .and. mh2osoi_ice2t(c,j,1) .ge. 0_r8 .and. mh2osoi_liq2t(c,j,2) .ge. 0_r8 .and. mh2osoi_ice2t(c,j,2) .ge. 0_r8) then
                 h2osoi_liq(c,j) = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2) * nudge + (1._r8 - nudge) * h2osoi_liq(c,j)
                 h2osoi_ice(c,j) = timwt_soil(1)*mh2osoi_ice2t(c,j,1) + timwt_soil(2)*mh2osoi_ice2t(c,j,2) * nudge + (1._r8 - nudge) * h2osoi_ice(c,j)
@@ -219,7 +218,7 @@
             l = clandunit(c)
             if (ltype(l) == istsoil) then
               ! Assign SOILLIQ
-              do j = 1, nlevsoi
+              do j = levstart, levstop
                 ! only overwrite liq if no ice is present
                 if (mh2osoi_liq2t(c,j,1) .ge. 0_r8 .and. mh2osoi_liq2t(c,j,2) .ge. 0_r8 .and. h2osoi_ice(c,j) == 0) then
                   h2osoi_liq(c,j) = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
@@ -331,7 +330,7 @@
           l = clandunit(c)
           if (ltype(l) == istsoil) then
             ! Assign SOILLIQ and SOILICE
-            do j = 1, nlevsoi
+            do j = levstart, levstop
               if (mh2osoi_liq2t(c,j,1) .ge. 0._r8 .and. mh2osoi_ice2t(c,j,1) .ge. 0._r8 .and. mh2osoi_liq2t(c,j,2) .ge. 0._r8 .and. mh2osoi_ice2t(c,j,2) .ge. 0._r8) then
                 h2osoi_liq(c,j) = max(timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2), h2osoi_liq(c,j))
                 h2osoi_ice(c,j) = max(timwt_soil(1)*mh2osoi_ice2t(c,j,1) + timwt_soil(2)*mh2osoi_ice2t(c,j,2), h2osoi_ice(c,j))
@@ -345,6 +344,7 @@
       ! USE only water from qflx_surf and qflx_drain (sub- and surface runoff) 
 
       else if (pSMtype == 5) then
+        call endrun(trim(subname)//' pSMtype 5 does not exist')
 
 
 
@@ -356,6 +356,7 @@
       ! (avoiding interception) at the ground in the next timestep
 
       else if (pSMtype == 6) then
+        call endrun(trim(subname)//' something is wrong with pSMtype 6 (dont know what)')
 
         do fc = 1, num_nolakec
           c = filter_nolakec(fc)
@@ -367,7 +368,7 @@
             if (qflx_surf(c) .gt. 0._r8 .and. qflx_surf(c) /= spval) then
 
               ! determine irrigation flux
-              do j = 1, nlevsoi
+              do j = levstart, levstop
                 
                 ! check if soil is frozen 
                 ! (if layer 3 is frozen, only accumulate deficit for layer 1 & 2)
@@ -694,13 +695,14 @@
       clandunit   => col%landunit
       
       ! Determine necessary indices
-      call get_proc_bounds(begc=begc,endc=endc)
+      call get_proc_bounds(begc=begc, endc=endc)
 
-      allocate(mh2osoi_liq(begc:endc,1:nlevgrnd), &
-               mh2osoi_ice(begc:endc,1:nlevgrnd), stat=ier)
+      allocate(mh2osoi_liq(begc:endc, 1:nlevgrnd), &
+               mh2osoi_ice(begc:endc, 1:nlevgrnd), stat=ier)
 
       if (ier /= 0) then
-         write(iulog,*)subname, 'allocation big error '; call endrun()
+         write(iulog, *) subname, 'allocation big error '
+         call endrun()
       end if
 
       if (monthly) then
@@ -744,22 +746,20 @@
 
         call ncd_pio_closefile(ncid)
 
-        ! write info to log
+
         if (masterproc) then
-            !call check_ret(nf90_close(ncid), subname)
             write(iulog,*) 'Successfully read ',  trim(cTimeStep), 'ly soil moisture data for'
             write(iulog,*) cTimeStep, ' ', months_soil(k)
-            write(iulog,*)
         end if
 
 
          ! store data directly in clmtype structure
-         do c = begc,endc
+         do c = begc, endc
             l = clandunit(c)
             if (ltype(l) == istsoil) then 
-               do j = 1, nlevgrnd
-                  mh2osoi_liq2t(c,j,k) = mh2osoi_liq(c,j)
-                  mh2osoi_ice2t(c,j,k) = mh2osoi_ice(c,j)
+               do j = 1, nlevsoi
+                  mh2osoi_liq2t(c, j, k) = mh2osoi_liq(c, j)
+                  mh2osoi_ice2t(c, j, k) = mh2osoi_ice(c, j)
                end do
             end if
          end do   ! end of loop over columns
