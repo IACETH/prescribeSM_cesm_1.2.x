@@ -1,7 +1,7 @@
-  module prescribeSoilMoistureMod
+module prescribeSoilMoistureMod
 
-  !-----------------------------------------------------------------------
-  !BOP
+  !---------------------------------------------------------------------
+  ! BOP
   !
   ! !MODULE: prescribeSoilMoistureMod
   !
@@ -10,48 +10,47 @@
   !
   ! USES
 
-    use shr_kind_mod,     only : r8 => shr_kind_r8
-    use clm_varpar, only       : nlevgrnd, nlevsoi
-    use abortutils,       only : endrun
-    use clm_varcon,       only : istsoil, watmin
-    use clm_varctl,       only : iulog
-    use spmdMod,          only : masterproc
-    use clm_time_manager, only : get_curr_date, get_step_size, get_perp_date, is_perpetual
-  ! !PUBLIC TYPES:
-    implicit none
-    save
-  !
-  ! !PUBLIC MEMBER FUNCTIONS:
-    public :: prescribeSoilMoisture  ! Sets Soil Moisture
+  use shr_kind_mod,     only : r8 => shr_kind_r8
+  use clm_varpar,       only : nlevgrnd, nlevsoi
+  use abortutils,       only : endrun
+  use clm_varcon,       only : istsoil, watmin
+  use clm_varctl,       only : iulog
+  use spmdMod,          only : masterproc
+  use clm_time_manager, only : get_curr_date, get_step_size, get_perp_date, is_perpetual
 
-  !
+  !PUBLIC TYPES:
+  implicit none
+  save
+
+  !PUBLIC MEMBER FUNCTIONS:
+  public :: prescribeSoilMoisture  ! Sets Soil Moisture
 
   ! !PRIVATE MEMBER FUNCTIONS:
-    private :: interpSoilMoisture   ! interpolate monthly SM data
-    private :: readSoilMoisture     ! read SM data from file
-  !
+  private :: interpSoilMoisture   ! interpolate monthly SM data
+  private :: readSoilMoisture     ! read SM data from file
 
-  ! !PRIVATE TYPES:
+  ! PRIVATE TYPES:
+  integer , private :: TimeStep_old = 0 ! time step at last call
+  real(r8), private :: dtime            ! land model time step (sec)
+  real(r8), private :: timwt_soil(2)    ! time weights for month 1 and month 2
+  real(r8), private, allocatable :: reservoir(:)           ! reservoir
+  real(r8), private, allocatable :: mh2osoi_liq2t(:, :, :) ! liquid soil water for interpolation (2 months) read from input files
+  real(r8), private, allocatable :: mh2osoi_ice2t(:, :, :) ! frozen soil water for interpolation (2 months) read from input files
 
-    integer , private :: TimeStep_old = 0 ! time step at last call
-    real(r8), private :: dtime            ! land model time step (sec)
-    real(r8), private :: timwt_soil(2)    ! time weights for month 1 and month 2
-    real(r8), private, allocatable :: mh2osoi_liq2t(:,:,:) !  liquid soil water for interpolation (2 months) read from input files
-    real(r8), private, allocatable :: mh2osoi_ice2t(:,:,:) !  frozen soil water for interpolation (2 months) read from input files
+  logical, private            :: monthly                    ! if .true. -> monthly, else daily
+  character(len=256), private :: pSMfile                    ! file name mit SM data to prescribe
+  integer, private            :: pSMtype = 1                ! how to prescribe SM [default = 1] 
+  real(r8), private           :: nudge = 1._r8              ! nudging
+  real(r8), private           :: reservoir_capacity = 0._r8 ! capacity of the reservoir storing water for dry periods
+  integer, private            :: levstart = 1               ! start level prescribing SM
+  integer, private            :: levstop = nlevsoi          ! end level prescribing SM
+  logical, private            :: use_qdrai = .true.         ! use qdrai in pSMtype3
 
-    logical, private            :: monthly            ! if .true. -> monthly, else daily
-    character(len=256), private :: pSMfile            ! file name mit SM data to prescribe
-    integer, private            :: pSMtype = 1        ! how to prescribe SM [default = 1] 
-    real(r8), private           :: nudge = 1._r8      ! nudging
-    integer, private            :: levstart = 1       ! start level prescribing SM
-    integer, private            :: levstop = nlevsoi  ! end level prescribing SM
-    logical, private            :: use_qdrai = .true. ! use qdrai in pSMtype3
-
-  ! !REVISION HISTORY:
+  ! REVISION HISTORY:
   ! Created by 
   !
-  !EOP
-  !-----------------------------------------------------------------------
+  ! EOP
+  !---------------------------------------------------------------------
 
   contains
 
@@ -61,72 +60,69 @@
   ! !IROUTINE: prescribeSoilMoisture
   !
   ! !INTERFACE:
-    subroutine prescribeSoilMoisture(lbc,ubc, num_nolakec, filter_nolakec)
-  !
-  ! !DESCRIPTION:
-  ! loads SM from a netCDF file and overwrites the SM state
-  ! (SOILLIQ (mh2osoi_liq) and SOILICE (mh2osoi_ice)) of the
-  ! model
-  ! Needs a history file originally created by CLM4.0
-  ! add the following to the clm namelist:
-  ! hist_fincl2 = 'SOILLIQ','SOILICE'
-  ! hist_fincl3 = 'SOILLIQ','SOILICE'
-  ! hist_fincl4 = 'SOILLIQ','SOILICE'
-  ! hist_nhtfrq = 0, -24, -24, 0
-  ! hist_mfilt = 1, 365, 365, 1
-  ! hist_dov2xy = .true., .true., .false., .false.
-  !
-  !
-  ! !USES:
+    subroutine prescribeSoilMoisture(lbc, ubc, num_nolakec, filter_nolakec)
+      !
+      ! !DESCRIPTION:
+      ! loads SM from a netCDF file and overwrites the SM state
+      ! (SOILLIQ (mh2osoi_liq) and SOILICE (mh2osoi_ice)) of the
+      ! model
+      ! Needs a history file originally created by CLM4.0
+      ! add the following to the clm namelist:
+      ! hist_fincl2 = 'SOILLIQ','SOILICE'
+      ! hist_fincl3 = 'SOILLIQ','SOILICE'
+      ! hist_fincl4 = 'SOILLIQ','SOILICE'
+      ! hist_nhtfrq = 0, -24, -24, 0
+      ! hist_mfilt = 1, 365, 365, 1
+      ! hist_dov2xy = .true., .true., .false., .false.
+      !
+      !
+      ! !USES:
       use clmtype
       use shr_const_mod,  only : SHR_CONST_TKFRZ ! freezing temperature of water
       use decompMod,      only : get_proc_bounds
       use clm_varcon,     only : spval
       use shr_infnan_mod, only : nan => shr_infnan_nan, assignment(=)
 
-  ! !ARGUMENTS:
+      ! ARGUMENTS:
       implicit none
-      integer, intent(in) :: lbc, ubc                    ! column bounds
-      integer, intent(in) :: num_nolakec                 ! number of column non-lake points in column filter
-      integer, intent(in) :: filter_nolakec(ubc-lbc+1)   ! column filter for non-lake points
-      integer, pointer    :: ltype(:)                    ! landunit type index
+      integer, intent(in) :: lbc, ubc                  ! column bounds
+      integer, intent(in) :: num_nolakec               ! number of column non-lake points in column filter
+      integer, intent(in) :: filter_nolakec(ubc-lbc+1) ! column filter for non-lake points
+      integer, pointer    :: ltype(:)                  ! landunit type index
 
 
-  ! !CALLED FROM:
-  ! clm_driver
-  !
-  ! !REVISION HISTORY:
-  ! Author: Mathias Hauser
-  !
-  ! !LOCAL VARIABLES:
-  !
-  ! local pointers to implicit in arguments
-  !
-    integer , pointer :: clandunit(:) ! column's landunit
-    real(r8), pointer :: t_soisno(:,:)  ! soil temperature (Kelvin)
+      ! CALLED FROM:
+      ! clm_driver
+      !
+      ! !REVISION HISTORY:
+      ! Author: Mathias Hauser
+      !
+      ! LOCAL VARIABLES:
 
-  ! local pointers to implicit inout arguments
-    real(r8), pointer :: qflx_drain(:)    ! sub-surface runoff (mm H2O /s)
-    real(r8), pointer :: qflx_irrig(:)    ! irrigation flux (mm H2O /s)
-    real(r8), pointer :: qflx_surf(:)     ! surface runoff (mm H2O /s)
-    real(r8), pointer :: qflx_runoff(:)   ! total runoff (qflx_drain+qflx_surf+qflx_qrgwl) (mm H2O /s)
-    real(r8), pointer :: wa(:)             !water in the unconfined aquifer (mm)
-  !
-  ! local pointers to implicit out arguments
-  !
-      real(r8), pointer :: h2osoi_liq(:,:)     ! liquid soil water content level
-      real(r8), pointer :: h2osoi_ice(:,:)     ! frozen soil water content level
+      ! local pointers to implicit in arguments
+      integer , pointer :: clandunit(:)   ! column's landunit
+      real(r8), pointer :: t_soisno(:, :) ! soil temperature (Kelvin)
+
+      ! local pointers to implicit inout arguments
+      real(r8), pointer :: qflx_drain(:)  ! sub-surface runoff (mm H2O /s)
+      real(r8), pointer :: qflx_irrig(:)  ! irrigation flux (mm H2O /s)
+      real(r8), pointer :: qflx_surf(:)   ! surface runoff (mm H2O /s)
+      real(r8), pointer :: qflx_runoff(:) ! total runoff (qflx_drain+qflx_surf+qflx_qrgwl) (mm H2O /s)
+      real(r8), pointer :: wa(:)          ! water in the unconfined aquifer (mm)
+      
+      ! local pointers to implicit out arguments
+      real(r8), pointer :: h2osoi_liq(:,:) ! liquid soil water content level
+      real(r8), pointer :: h2osoi_ice(:,:) ! frozen soil water content level
 
 
-  !
-  ! !OTHER LOCAL VARIABLES:
-  !EOP
-  !
+      !
+      ! !OTHER LOCAL VARIABLES:
+      !EOP
+      !
       integer :: fc,j,l,c           ! indices
       integer :: begc,endc          ! beg and end local column index
       integer :: ier                ! error code
       logical :: FirstCall = .true. ! make sure initPrescribeSoilMoisture is only called once
-
 
       real(r8) :: frac        ! fraction
       real(r8) :: SL          ! total SOILLIQ for a timestep
@@ -136,7 +132,7 @@
       real(r8) :: SMdeficit   ! missing SM per column
       real(r8) :: SMassigned  ! missing SM per column
 
-  !-----------------------------------------------------------------------
+      ! ---------------------------------------------------------------------
 
 
       ! implicit out arguments
@@ -157,6 +153,7 @@
 
       call get_proc_bounds(begc=begc,endc=endc)
       
+      ! allocate mh2osoi_liq2t & mh2osoi_ice2t
       if (.not. allocated(mh2osoi_liq2t) .or. .not. allocated(mh2osoi_ice2t)) then
         allocate (mh2osoi_liq2t(begc:endc,1:nlevgrnd,2), &
                   mh2osoi_ice2t(begc:endc,1:nlevgrnd,2), stat=ier)
@@ -168,6 +165,18 @@
         
         mh2osoi_liq2t(:,:,:) = nan
         mh2osoi_ice2t(:,:,:) = nan
+      endif
+
+      ! allocate mh2osoi_liq2t & mh2osoi_ice2t
+      if (.not. allocated(reservoir)) then
+        allocate (reservoir(begc:endc), stat=ier)
+
+        if (ier /= 0) then
+          write(iulog, *) 'prescribeSoilMoistureMod allocation error'
+          call endrun
+        endif
+        
+        reservoir(:) = 0._r8
       endif
 
       ! get file name and 'monthly' or 'daily' from namelist (only once)
@@ -270,43 +279,45 @@
               water_avail = (qflx_surf(c)) * dtime
             end if
 
-            ! water available?
+            ! water available? (stop div0 errors)
             if (water_avail .gt. 0._r8) then
-
               ! for subtracting water from qflx_surf and qflx_drain
-              frac = (qflx_surf(c) * dtime) / (water_avail)
+              frac = (qflx_surf(c) * dtime) / water_avail
+            end if
 
-              if (masterproc) then
-                  write(iulog,*) '-----------------------------'
-                  write(iulog,*) 'Start New Gridpoint'
-                  write(iulog,*) 'Max water, water_avail: ', water_avail
-              end if
-                        
-              do j = levstart, levstop
-              
-                ! check if soil is frozen 
-                ! (if layer 3 is frozen, only accumulate deficit for layer 1 & 2)
-                if (t_soisno(c,j) <= SHR_CONST_TKFRZ) then
-                  if (masterproc) then
-                    write(iulog,*) 'there is ice on level: ', j
-                  end if
-
-                  exit ! leave do j = levstart, levstop
+            if (masterproc) then
+                write(iulog,*) '-----------------------------'
+                write(iulog,*) 'Start New Gridpoint'
+                write(iulog,*) 'Max water, water_avail: ', water_avail
+            end if
+                      
+            do j = levstart, levstop
+            
+              ! check if soil is frozen 
+              ! (if layer 3 is frozen, only accumulate deficit for layer 1 & 2)
+              if (t_soisno(c,j) <= SHR_CONST_TKFRZ) then
+                if (masterproc) then
+                  write(iulog,*) 'there is ice on level: ', j
                 end if
 
-                ! obtain desired SL and SI
-                SL = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
-                SI = timwt_soil(1)*mh2osoi_ice2t(c,j,1) + timwt_soil(2)*mh2osoi_ice2t(c,j,2)
+                exit ! leave do j = levstart, levstop
+              end if
 
-                ! prescribe total water (important at places where there is no more soil ice)
-                SM = SL + SI
+              ! obtain desired SL and SI
+              SL = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
+              SI = timwt_soil(1)*mh2osoi_ice2t(c,j,1) + timwt_soil(2)*mh2osoi_ice2t(c,j,2)
 
-                ! SMdeficit
-                SMdeficit = max(SM - h2osoi_liq(c,j), 0._r8)
+              ! prescribe total water (important at places where there is no more soil ice)
+              SM = SL + SI
+
+              ! SMdeficit
+              SMdeficit = max(SM - h2osoi_liq(c,j), 0._r8)
+              
+              ! is there a deficit?
+              if (SMdeficit .gt. 0._r8) then
                 
-                ! is there a deficit?
-                if (SMdeficit .gt. 0._r8) then
-                  
+                ! RUNOFF
+                if (water_avail .gt. 0._r8) then
                   ! how much can we add?
                   SMassigned = min(water_avail, SMdeficit)
 
@@ -325,25 +336,67 @@
                   
                   ! also decrease available water
                   water_avail = water_avail - SMassigned
-                  
+                end if ! (water_avail .gt. 0._r8)
+
+                ! RESERVOIR
+                if (reservoir(c) .gt. 0._r8) then
+                  ! get an update of the missing water
+                  SMdeficit = max(0._r8, SMdeficit - SMassigned)
+
+                  ! how much can we add?
+                  SMassigned = min(reservoir(c), SMdeficit)
+
+                  ! add water
+                  h2osoi_liq(c,j) = h2osoi_liq(c,j) + SMassigned                
+
+                  ! update the reservoir
+                  reservoir(c) = max(0._r8, reservoir(c) - SMassigned)
+                end if ! reservoir(c) .gt. 0._r8
+
+                ! check if water is available
+                if (water_avail <= 0._r8 .and. reservoir(c) <= 0._r8) then
                   if (masterproc) then
-                    write(iulog,*) 'Level: ', j, 'SMdeficit: ', SMdeficit, 'SMassigned: ', SMassigned
+                    write(iulog,*) 'there is no more water on level: ', j
                   end if
 
+                  exit
+                end if              
+              end if ! (SMdeficit .gt. 0._r8)
+            end do ! j = 1, nlevgrnd
 
-                  ! check if water is available
-                  if (water_avail .eq. 0._r8) then
-                    if (masterproc) then
-                      write(iulog,*) 'there is no more water on level: ', j
-                    end if
 
-                    exit
-                  end if              
-                end if ! (SMdeficit .gt. 0._r8)
-              end do ! j = 1, nlevgrnd
-              ! restrict the irrigation to the surface runoff of this time step
+            ! Fill the Reservoir if neccesary and possible
+            SMdeficit = max(reservoir_capacity - reservoir(c),  0._r8)
+            if (min(reservoir_capacity, water_avail) >= 0._r8) then
 
-            end if ! not spval and > 0
+              ! how much water is missing in the reservoir                  
+              SMassigned = min(water_avail, SMdeficit)
+
+              ! add water
+              h2osoi_liq(c,j) = h2osoi_liq(c,j) + SMassigned
+
+              ! subtract from runoff (protect from rounding errors)
+
+              ! according to the fraction available water
+              qflx_surf(c) = max(qflx_surf(c) - frac * (SMassigned / dtime), 0._r8)
+              ! if not use_qdrai: frac == 1
+              qflx_drain(c) = max(qflx_drain(c) - (1._r8 - frac) * (SMassigned / dtime), 0._r8)
+              
+              ! qflx_runoff = qflx_drain+qflx_surf+qflx_qrgwl
+              qflx_runoff(c) = max(qflx_runoff(c) - SMassigned / dtime, 0._r8)
+
+
+
+
+
+
+
+            end if
+
+
+
+
+
           end if ! istsoil
         end do ! fc = 1, num_nolakec
 
@@ -486,7 +539,7 @@
 
       ! Input datasets
       namelist /prescribe_sm/  &
-           pSMfile, monthly, pSMtype, nudge, levstart, levstop, use_qdrai
+           pSMfile, monthly, pSMtype, nudge, reservoir_capacity, levstart, levstop, use_qdrai
 
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       ! CAREFUL: IF YOU USE A DAILY pSMfile BUT SET monthly = .true.  !
@@ -517,6 +570,7 @@
         write(iulog,*) 'Read monthly from namelist:', monthly
         write(iulog,*) 'Read pSMtype from namelist:', pSMtype
         write(iulog,*) 'Read nudge from namelist:', nudge
+        write(iulog,*) 'Read reservoir_capacity from namelist:', reservoir_capacity
         write(iulog,*) 'Read levstart from namelist:', levstart
         write(iulog,*) 'Read levstop from namelist:', levstop
         write(iulog,*) 'Read use_qdrai from namelist:', use_qdrai
@@ -538,8 +592,9 @@
           call endrun(trim(subname)//'levstop/ start must not be smaller than 1')
         end if
 
-
-
+        if (reservoir_capacity < 0._r8) then
+          call endrun(trim(subname)//'reservoir_capacity must be >= 0')
+        end if
 
 
         if (pSMtype == 1) then
