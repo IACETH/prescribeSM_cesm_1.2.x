@@ -1388,6 +1388,7 @@ type, public :: column_wflux_type
    real(r8), pointer :: qflx_glcice_melt(:) ! ice melt (positive definite) (mm H2O/s)
    real(r8), pointer :: glc_rofi(:)         ! ice runoff passed from GLC to CLM (mm H2O /s)
    real(r8), pointer :: glc_rofl(:)         ! liquid runoff passed from GLC to CLM (mm H2O /s)
+   real(r8), pointer :: reservoir(:)        ! water reservoir for irrigation [mm]
 end type column_wflux_type
 
 type(column_wflux_type) :: cwf       ! column water flux

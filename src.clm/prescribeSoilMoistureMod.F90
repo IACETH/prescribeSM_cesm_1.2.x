@@ -110,6 +110,8 @@ module prescribeSoilMoistureMod
       real(r8), pointer :: qflx_runoff(:) ! total runoff (qflx_drain+qflx_surf+qflx_qrgwl) (mm H2O /s)
       real(r8), pointer :: wa(:)          ! water in the unconfined aquifer (mm)
       
+      real(r8), pointer :: reservoir(:)   ! water in the reservoir (mm)
+
       ! local pointers to implicit out arguments
       real(r8), pointer :: h2osoi_liq(:,:) ! liquid soil water content level
       real(r8), pointer :: h2osoi_ice(:,:) ! frozen soil water content level
@@ -146,6 +148,8 @@ module prescribeSoilMoistureMod
       qflx_runoff       => cwf%qflx_runoff
       wa                => cws%wa
 
+      reservoir         => cwf%reservoir
+
       ! implicit in arguments
       t_soisno    => ces%t_soisno
       clandunit   => col%landunit
@@ -165,18 +169,6 @@ module prescribeSoilMoistureMod
         
         mh2osoi_liq2t(:,:,:) = nan
         mh2osoi_ice2t(:,:,:) = nan
-      endif
-
-      ! allocate mh2osoi_liq2t & mh2osoi_ice2t
-      if (.not. allocated(reservoir)) then
-        allocate (reservoir(begc:endc), stat=ier)
-
-        if (ier /= 0) then
-          write(iulog, *) 'prescribeSoilMoistureMod allocation error'
-          call endrun
-        endif
-        
-        reservoir(:) = 0._r8
       endif
 
       ! get file name and 'monthly' or 'daily' from namelist (only once)

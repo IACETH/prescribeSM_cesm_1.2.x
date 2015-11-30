@@ -1978,6 +1978,22 @@ contains
        end if
     end if
 
+
+    ! column reservoir variable - reservoir
+    if (flag == 'define') then
+       call ncd_defvar(ncid=ncid, varname='reservoir', xtype=ncd_double,  &
+            dim1name='column', &
+            long_name='reservoir state', units='mm')
+    else if (flag == 'read' .or. flag == 'write') then
+       call ncd_io(varname='reservoir', data=cwf%reservoir, &
+            dim1name='column', &
+            ncid=ncid, flag=flag, readvar=readvar)
+       if (flag=='read' .and. .not. readvar) then
+          if (is_restart()) call endrun()
+          cps%reservoir = 0.0_r8
+       end if
+    end if
+
     ! initialize other variables that are derived from those
     ! stored in the restart buffer. (there may be a more appropriate
     ! place to do this, but functionally this works)

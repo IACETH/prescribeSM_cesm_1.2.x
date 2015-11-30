@@ -848,6 +848,11 @@ contains
          avgflag='A', long_name='water added through irrigation', &
          ptr_col=cwf%qflx_irrig, set_lake=0._r8)
 
+    call hist_addfld1d (fname='RESERVOIR', units='mm', &
+         avgflag='A', long_name='water stored in the reservoir', &
+         ptr_col=cwf%reservoir, set_lake=0._r8)
+
+
     if (create_glacier_mec_landunit) then
 
        call hist_addfld1d (fname='QICE',  units='mm/s',  &

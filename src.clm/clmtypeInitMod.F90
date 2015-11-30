@@ -3174,7 +3174,7 @@ contains
     allocate(cwf%glc_rofl(beg:end))
     allocate(cwf%qflx_floodc(beg:end))
     allocate(cwf%qflx_snow_melt(beg:end))
-
+    allocate(cwf%reservoir(beg:end))
     cwf%qflx_infl(beg:end) = nan
     cwf%qflx_surf(beg:end) = nan
     cwf%qflx_drain(beg:end) = nan
@@ -3217,7 +3217,7 @@ contains
     cwf%glc_rofl(beg:end)    = nan
     cwf%qflx_floodc(beg:end) = spval
     cwf%qflx_snow_melt(beg:end) = spval
-
+    cwf%reservoir(beg:end) = 0._r8
   end subroutine init_column_wflux_type
 
 !------------------------------------------------------------------------
