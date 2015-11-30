@@ -1990,7 +1990,7 @@ contains
             ncid=ncid, flag=flag, readvar=readvar)
        if (flag=='read' .and. .not. readvar) then
           if (is_restart()) call endrun()
-          cps%reservoir = 0.0_r8
+          cwf%reservoir = 0.0_r8
        end if
     end if
 
