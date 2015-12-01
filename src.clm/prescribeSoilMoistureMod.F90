@@ -281,12 +281,13 @@ module prescribeSoilMoistureMod
                 write(iulog,*) '-----------------------------'
                 write(iulog,*) 'Start New Gridpoint'
                 write(iulog,*) 'Max water, water_avail: ', water_avail
+                write(iulog,*) 'Reservoir: ', reservoir(c)
             end if
                       
             do j = levstart, levstop
             
               ! check if soil is frozen 
-              ! (if layer 3 is frozen, only accumulate deficit for layer 1 & 2)
+              ! (if layer 3 is frozen, only 'correct' deficit for layer 1 & 2)
               if (t_soisno(c,j) <= SHR_CONST_TKFRZ) then
                 if (masterproc) then
                   write(iulog,*) 'there is ice on level: ', j
@@ -296,14 +297,14 @@ module prescribeSoilMoistureMod
               end if
 
               ! obtain desired SL and SI
-              SL = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
-              SI = timwt_soil(1)*mh2osoi_ice2t(c,j,1) + timwt_soil(2)*mh2osoi_ice2t(c,j,2)
+              SL = timwt_soil(1) * mh2osoi_liq2t(c, j, 1) + timwt_soil(2) * mh2osoi_liq2t(c, j, 2)
+              SI = timwt_soil(1) * mh2osoi_ice2t(c, j, 1) + timwt_soil(2) * mh2osoi_ice2t(c, j, 2)
 
               ! prescribe total water (important at places where there is no more soil ice)
               SM = SL + SI
 
               ! SMdeficit
-              SMdeficit = max(SM - h2osoi_liq(c,j), 0._r8)
+              SMdeficit = max(SM - h2osoi_liq(c, j), 0._r8)
               
               ! is there a deficit?
               if (SMdeficit .gt. 0._r8) then
@@ -331,7 +332,7 @@ module prescribeSoilMoistureMod
                 end if ! (water_avail .gt. 0._r8)
 
                 ! RESERVOIR
-                if (reservoir(c) .gt. 0._r8) then
+                if (reservoir(c) > 0._r8) then
                   ! get an update of the missing water
                   SMdeficit = max(0._r8, SMdeficit - SMassigned)
 
@@ -359,13 +360,13 @@ module prescribeSoilMoistureMod
 
             ! Fill the Reservoir if neccesary and possible
             SMdeficit = max(reservoir_capacity - reservoir(c),  0._r8)
-            if (min(reservoir_capacity, water_avail) >= 0._r8) then
+            if (min(SMdeficit, water_avail) > 0._r8) then
 
               ! how much water is missing in the reservoir                  
               SMassigned = min(water_avail, SMdeficit)
 
               ! add water
-              h2osoi_liq(c,j) = h2osoi_liq(c,j) + SMassigned
+              reservoir(c) = reservoir(c) + SMassigned
 
               ! subtract from runoff (protect from rounding errors)
 
