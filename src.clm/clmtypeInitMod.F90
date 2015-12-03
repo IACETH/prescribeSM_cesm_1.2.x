@@ -2912,6 +2912,9 @@ contains
     allocate(cws%hk_l(beg:end,1:nlevgrnd))
     allocate(cws%forc_q(beg:end))
 
+    allocate(cws%soilliq_prescribed(beg:end,1:nlevsoi))
+    allocate(cws%soilice_prescribed(beg:end,1:nlevsoi))
+
     cws%h2osno(beg:end) = nan
     cws%errh2osno(beg:end) = nan
     cws%snow_sources(beg:end) = nan
@@ -2937,6 +2940,9 @@ contains
     cws%smp_l(beg:end,1:nlevgrnd) = spval
     cws%hk_l(beg:end,1:nlevgrnd) = spval
     cws%forc_q(beg:end) = nan
+
+    cws%soilliq_prescribed(beg:end,1:nlevsoi) = 0._r8
+    cws%soilice_prescribed(beg:end,1:nlevsoi) = 0._r8
 
   end subroutine init_column_wstate_type
 

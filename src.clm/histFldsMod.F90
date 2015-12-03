@@ -852,6 +852,17 @@ contains
          avgflag='A', long_name='water stored in the reservoir', &
          ptr_col=cwf%reservoir, set_lake=0._r8)
 
+    call hist_addfld2d (fname='SOILLIQ_PRES',  units='kg/m2', type2d='levgrnd', &
+         avgflag='A', long_name='prescribed soil liquid water (vegetated landunits only)', &
+         ptr_col=cws%soilliq_prescribed, l2g_scale_type='veg')
+
+    call hist_addfld2d (fname='SOILICE_PRES',  units='kg/m2', type2d='levgrnd', &
+         avgflag='A', long_name='prescribed soil ice (vegetated landunits only)', &
+         ptr_col=cws%soilice_prescribed, l2g_scale_type='veg')
+
+
+
+
 
     if (create_glacier_mec_landunit) then
 

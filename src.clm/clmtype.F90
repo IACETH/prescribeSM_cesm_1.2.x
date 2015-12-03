@@ -1217,6 +1217,9 @@ type, public :: column_wstate_type
    real(r8), pointer :: hk_l(:,:)             !hydraulic conductivity (mm/s)
    real(r8), pointer :: fsat(:)               !fractional area with water table at surface
    real(r8), pointer :: forc_q(:)             !atm specific humidity, downscaled to column (kg/kg)
+
+   real(r8), pointer :: soilliq_prescribed(:, :) ! added SL at current timestep [mm]
+   real(r8), pointer :: soilice_prescribed(:, :) ! added SI at current timestep [mm]
 end type column_wstate_type
 
 type(column_wstate_type) :: cws      !column water state

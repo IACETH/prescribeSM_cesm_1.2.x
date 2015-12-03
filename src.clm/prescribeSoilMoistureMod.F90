@@ -112,6 +112,11 @@ module prescribeSoilMoistureMod
       
       real(r8), pointer :: reservoir(:)   ! water in the reservoir (mm)
 
+      real(r8), pointer :: soilliq_prescribed(:, :) ! how much SL did we prescribe at this time step
+      real(r8), pointer :: soilice_prescribed(:, :) ! how much SI did we prescribe at this time step
+
+
+
       ! local pointers to implicit out arguments
       real(r8), pointer :: h2osoi_liq(:,:) ! liquid soil water content level
       real(r8), pointer :: h2osoi_ice(:,:) ! frozen soil water content level
@@ -134,6 +139,7 @@ module prescribeSoilMoistureMod
       real(r8) :: SMdeficit   ! missing SM per column
       real(r8) :: SMassigned  ! missing SM per column
 
+
       ! ---------------------------------------------------------------------
 
 
@@ -148,8 +154,13 @@ module prescribeSoilMoistureMod
       qflx_runoff       => cwf%qflx_runoff
       wa                => cws%wa
 
-      reservoir         => cwf%reservoir
 
+
+      reservoir          => cwf%reservoir
+
+      soilliq_prescribed => cws%soilliq_prescribed
+      soilice_prescribed => cws%soilice_prescribed
+      
       ! implicit in arguments
       t_soisno    => ces%t_soisno
       clandunit   => col%landunit
@@ -191,7 +202,22 @@ module prescribeSoilMoistureMod
       ! overwrite the current soil water and ice content
       ! only if SOILLIQ & SOILICE are >= 0
 
-! ===========================================================================================================================================================================
+! =======================================================================================================================
+
+      ! FIND OUT HOW MUCH LIQ AND ICE IS PRESCRIBED
+      do fc = 1, num_nolakec
+        c = filter_nolakec(fc)
+        l = clandunit(c)
+        if (ltype(l) == istsoil) then
+          do j = 1, nlevsoi
+              ! save current state of h2osoi liq and ice
+              soilliq_prescribed(c, j) = h2osoi_liq(c,j)
+              soilice_prescribed(c, j) = h2osoi_ice(c,j)
+          end do ! j = 1, nlevgrnd
+        end if
+      end do ! fc = 1, num_nolakec
+
+! =======================================================================================================================
 
       ! CLASSICAL: prescribe SOILLIQ and SOILICE
       ! NOW INCLUDES NUDGING
@@ -218,7 +244,7 @@ module prescribeSoilMoistureMod
           end if
         end do ! fc = 1, num_nolakec
 
-! ===========================================================================================================================================================================
+! =======================================================================================================================
 
       ! PRESCRIBE SM if T_SOIL > 273.15
       else if (pSMtype == 2) then
@@ -253,7 +279,7 @@ module prescribeSoilMoistureMod
           end if
         end do
 
-! ===========================================================================================================================================================================
+! =======================================================================================================================
 
       ! USE only water from qflx_surf and maybe qflx_drai to PRESCRIBE SM
       else if (pSMtype == 3) then
@@ -393,7 +419,7 @@ module prescribeSoilMoistureMod
           end if ! istsoil
         end do ! fc = 1, num_nolakec
 
-! ===========================================================================================================================================================================
+! =======================================================================================================================
 
       ! ONLY PRESCRIBE IF LESS THAN 
       else if (pSMtype == 4) then
@@ -421,7 +447,7 @@ module prescribeSoilMoistureMod
           end if
         end do ! fc = 1, num_nolakec
 
-! ===========================================================================================================================================================================
+! =======================================================================================================================
 
       ! USE only water from qflx_surf and qflx_drain (sub- and surface runoff) 
 
@@ -429,7 +455,7 @@ module prescribeSoilMoistureMod
 
         call endrun('initPrescribeSoilMoisture: pSMtype 5 does not exist')
 
-! ===========================================================================================================================================================================
+! =======================================================================================================================
 
 
       ! IRRIGATION 
@@ -492,6 +518,21 @@ module prescribeSoilMoistureMod
 
       end if ! pSMtype
 
+
+! =======================================================================================================================
+
+      ! FIND OUT HOW MUCH LIQ AND ICE IS PRESCRIBED
+      do fc = 1, num_nolakec
+        c = filter_nolakec(fc)
+        l = clandunit(c)
+        if (ltype(l) == istsoil) then
+          do j = 1, nlevsoi
+              ! subtract the old from the new SL and SI state
+              soilliq_prescribed(c, j) = h2osoi_liq(c,j) - soilliq_prescribed(c, j)
+              soilice_prescribed(c, j) = h2osoi_ice(c,j) - soilice_prescribed(c, j)
+          end do ! j = 1, nlevgrnd
+        end if
+      end do ! fc = 1, num_nolakec
 
     end subroutine prescribeSoilMoisture
 
