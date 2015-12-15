@@ -2912,8 +2912,8 @@ contains
     allocate(cws%hk_l(beg:end,1:nlevgrnd))
     allocate(cws%forc_q(beg:end))
 
-    allocate(cws%soilliq_prescribed(beg:end,1:nlevsoi))
-    allocate(cws%soilice_prescribed(beg:end,1:nlevsoi))
+    allocate(cws%soilliq_prescribed(beg:end,1:nlevgrnd))
+    allocate(cws%soilice_prescribed(beg:end,1:nlevgrnd))
 
     cws%h2osno(beg:end) = nan
     cws%errh2osno(beg:end) = nan
