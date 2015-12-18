@@ -745,10 +745,10 @@ module prescribeSoilMoistureMod
 
           ! if t < 0.5 we need 'doy - 1' and 'doy'
           ! else we need 'doy' and 'doy + 1'
-          TimeStep(1) = doy + floor(t - 0.5)
-          TimeStep(2) = doy + floor(t + 0.5)
+          TimeStep(1) = doy + floor(t - 0.5_r8)
+          TimeStep(2) = doy + floor(t + 0.5_r8)
 
-          timwt_soil(1) = TimeStep(2) - doy - t + 0.5._r8
+          timwt_soil(1) = TimeStep(2) - doy - t + 0.5_r8
           timwt_soil(2) = 1._r8 - timwt_soil(1)
 
           if (TimeStep(1) < 1) TimeStep(1) = 365
