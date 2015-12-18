@@ -38,6 +38,7 @@ module prescribeSoilMoistureMod
   real(r8), private, allocatable :: mh2osoi_ice2t(:, :, :) ! frozen soil water for interpolation (2 months) read from input files
 
   logical, private            :: monthly                    ! if .true. -> monthly, else daily
+  logical, private            :: interp_day = .true.        ! time interpolation when monthly == false
   character(len=256), private :: pSMfile                    ! file name mit SM data to prescribe
   integer, private            :: pSMtype = 1                ! how to prescribe SM [default = 1] 
   real(r8), private           :: nudge = 1._r8              ! nudging
@@ -573,7 +574,7 @@ module prescribeSoilMoistureMod
 
       ! Input datasets
       namelist /prescribe_sm/  &
-           pSMfile, monthly, pSMtype, nudge, reservoir_capacity, levstart, levstop, use_qdrai
+           pSMfile, monthly, pSMtype, nudge, reservoir_capacity, levstart, levstop, use_qdrai, interp_day
 
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       ! CAREFUL: IF YOU USE A DAILY pSMfile BUT SET monthly = .true.  !
@@ -602,6 +603,7 @@ module prescribeSoilMoistureMod
       if (masterproc) then
         write(iulog,*) 'Read pSMfile from namelist:', trim(pSMfile)
         write(iulog,*) 'Read monthly from namelist:', monthly
+        write(iulog,*) 'Read interp_day from namelist:', interp_day
         write(iulog,*) 'Read pSMtype from namelist:', pSMtype
         write(iulog,*) 'Read nudge from namelist:', nudge
         write(iulog,*) 'Read reservoir_capacity from namelist:', reservoir_capacity
@@ -697,6 +699,7 @@ module prescribeSoilMoistureMod
       integer :: it(2)       ! month 1 and month 2 (step 1)
       integer :: TimeStep(2) ! months to be interpolated (1 to 12)
       integer :: doy         ! day of year (1..365)    
+      integer :: offset      ! how much must we shift time?
 
       real(r8) :: nsec = 86400._r8 ! num of sec per day
       integer, dimension(12) :: ndaypm = &
@@ -708,10 +711,17 @@ module prescribeSoilMoistureMod
   !-----------------------------------------------------------------------
       dtime = get_step_size()
 
-      if ( is_perpetual() ) then
-         call get_perp_date(kyr, kmo, kda, ksec, offset=int(dtime))
+      if (monthly .or. .not. interp_day) then
+        offset = int(dtime)
       else
-         call get_curr_date(kyr, kmo, kda, ksec, offset=int(dtime))
+        offset = - int(dtime / 2._r8)
+      end if
+
+
+      if ( is_perpetual() ) then
+         call get_perp_date(kyr, kmo, kda, ksec, offset=offset)
+      else
+         call get_curr_date(kyr, kmo, kda, ksec, offset=offset)
       end if
 
       if (monthly) then ! interpolate monthly data
@@ -727,6 +737,7 @@ module prescribeSoilMoistureMod
           timwt_soil(2) = 1._r8-timwt_soil(1)
 
       else ! interpolate daily data
+        if (interp_day) then
           doy = cdaypm(kmo) + kda
 
           ! fraction of day that has passed
@@ -737,12 +748,20 @@ module prescribeSoilMoistureMod
           TimeStep(1) = doy + floor(t - 0.5)
           TimeStep(2) = doy + floor(t + 0.5)
 
+          timwt_soil(1) = TimeStep(2) - doy - t + 0.5._r8
+          timwt_soil(2) = 1._r8 - timwt_soil(1)
+
           if (TimeStep(1) < 1) TimeStep(1) = 365
           if (TimeStep(2) > 365) TimeStep(2) = 1
 
-          timwt_soil(1) = 1._r8 - abs(t - 0.5_r8)
-          timwt_soil(2) = 1._r8 - timwt_soil(1)
+        else
+          TimeStep(1) = doy
+          TimeStep(2) = 1 ! constant / not used
 
+          timwt_soil(1) = 1._r8
+          timwt_soil(2) = 0._r8
+        
+        end if ! interpe_day
       endif ! monthly
 
       
