@@ -754,7 +754,7 @@ module prescribeSoilMoistureMod
           if (TimeStep(1) < 1) TimeStep(1) = 365
           if (TimeStep(2) > 365) TimeStep(2) = 1
 
-        else
+        else ! no interpolation during one day
           TimeStep(1) = doy
           TimeStep(2) = 1 ! constant / not used
 
