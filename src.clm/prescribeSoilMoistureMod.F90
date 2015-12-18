@@ -711,7 +711,8 @@ module prescribeSoilMoistureMod
   !-----------------------------------------------------------------------
       dtime = get_step_size()
 
-      if (monthly .or. .not. interp_day) then
+      if (monthly) then 
+        ! as originally programmed
         offset = int(dtime)
       else
         offset = - int(dtime / 2._r8)
@@ -737,8 +738,8 @@ module prescribeSoilMoistureMod
           timwt_soil(2) = 1._r8-timwt_soil(1)
 
       else ! interpolate daily data
+        doy = cdaypm(kmo) + kda
         if (interp_day) then
-          doy = cdaypm(kmo) + kda
 
           ! fraction of day that has passed
           t = ksec / nsec
