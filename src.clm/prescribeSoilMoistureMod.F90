@@ -405,48 +405,48 @@ module prescribeSoilMoistureMod
               ! qflx_runoff = qflx_drain+qflx_surf+qflx_qrgwl
               qflx_runoff(c) = max(qflx_runoff(c) - SMassigned / dtime, 0._r8)
 
-
-
-
-
-
-
             end if
-
-
-
-
 
           end if ! istsoil
         end do ! fc = 1, num_nolakec
 
 ! =======================================================================================================================
 
-      ! ONLY PRESCRIBE IF LESS THAN 
+      ! PRESCRIBE SOILLIQ if T_SOIL > 273.15
+      ! ONLY PRESCRIBE IF LESS THAN
       else if (pSMtype == 4) then
 
         do fc = 1, num_nolakec
           c = filter_nolakec(fc)
           l = clandunit(c)
           if (ltype(l) == istsoil) then
-            ! Assign SOILLIQ and SOILICE
             do j = levstart, levstop
 
+              ! check if soil is frozen 
+              ! (if layer 3 is frozen, only accumulate deficit for layer 1 & 2)
+              ! only overwrite liq if no ice is present
+              if (t_soisno(c,j) <= SHR_CONST_TKFRZ) then
+                exit ! leave do j = levstart, levstop
+              end if
+              
               ! only prescribe if all SL and SI values are >= 0
               if (min(mh2osoi_liq2t(c,j,1), mh2osoi_ice2t(c,j,1), mh2osoi_liq2t(c,j,2), mh2osoi_ice2t(c,j,2)) .ge. 0_r8) then
-              
-                ! desired SM state at this level
+
                 ! obtain desired SL and SI at this timestep
                 SL = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
                 SI = timwt_soil(1)*mh2osoi_ice2t(c,j,1) + timwt_soil(2)*mh2osoi_ice2t(c,j,2)
 
+                ! prescribe total water (at places where there is no more soil ice)
+                SM = SL + SI
+
+                ! including nudging (important to avoid jumps)
+                SM = SM * nudge + (1._r8 - nudge) * h2osoi_liq(c,j)
                 ! ONLY PRESCRIBE IF LESS THAN
-                h2osoi_liq(c,j) = max(SL, h2osoi_liq(c,j))
-                h2osoi_ice(c,j) = max(SI, h2osoi_ice(c,j))
-              end if ! liq >= 0
-            end do ! j = 1, nlevgrnd
+                h2osoi_liq(c,j) = max(h2osoi_liq(c,j), SM)
+              end if
+            end do 
           end if
-        end do ! fc = 1, num_nolakec
+        end do
 
 ! =======================================================================================================================
 
