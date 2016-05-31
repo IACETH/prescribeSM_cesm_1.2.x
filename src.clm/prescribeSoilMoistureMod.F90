@@ -617,7 +617,7 @@ module prescribeSoilMoistureMod
 
 
         if (levstart .gt. levstop) then
-          call endrun(trim(subname)//'levstop must be bigger than levend')
+          call endrun(trim(subname)//'levstop must be bigger than levstart')
         end if
 
         if (max(levstart,  levstop) .gt. nlevsoi) then
