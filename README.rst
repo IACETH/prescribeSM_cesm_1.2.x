@@ -1,17 +1,18 @@
 prescribeSM CESM 1.2.x
 ======================
 
-*prescribeSM_CESM_1.2.x* allows to prescribe SOILLIQ and SOILICE in CLM 4.0 for CESM 1.2.x in a number of different ways.
+*prescribeSM_CESM_1.2.x* provides an extension to the [Community Land Model](http://www.cesm.ucar.edu/models/clm/) (CLM), to prescribe SOILLIQ (and SOILICE). CLM is part of the [Community Earth System Model](http://www2.cesm.ucar.edu/). Supported releases are [CLM 4.0](http://www.cesm.ucar.edu/models/cesm1.2/clm/) and [CESM 1.2](http://www.cesm.ucar.edu/models/cesm1.2/).
+
 
 Documentation
 -------------
 
-You can find documentation on http://prescribesm-cesm-12x.readthedocs.io/
+The documentation is hosted on ReadTheDocs at: http://prescribesm-cesm-12x.readthedocs.io/
 
 Source Code
 -----------
 
-The source code is available under: github.com/IACETH/prescribeSM_cesm_1.2.x
+The source code is available under: http://github.com/IACETH/prescribeSM_cesm_1.2.x
 
 License
 -------
@@ -27,5 +28,5 @@ Info
 Author: Mathias Hauser
 
 Model Version:
-CESM 1.2.1
+CESM 1.2.x
 CLM 4.0
