@@ -1,7 +1,7 @@
 prescribeSM CESM 1.2.x
 ======================
 
-*prescribeSM_CESM_1.2.x* provides an extension to the [Community Land Model](http://www.cesm.ucar.edu/models/clm/) (CLM), to prescribe SOILLIQ (and SOILICE). CLM is part of the [Community Earth System Model](http://www2.cesm.ucar.edu/). Supported releases are [CLM 4.0](http://www.cesm.ucar.edu/models/cesm1.2/clm/) and [CESM 1.2](http://www.cesm.ucar.edu/models/cesm1.2/).
+*prescribeSM_CESM_1.2.x* provides an extension to the [Community Land Model](http://www.cesm.ucar.edu/models/clm/) (CLM), to prescribe liquid soil water (SOILLIQ; and soil ice (SOILICE)). CLM is part of the [Community Earth System Model](http://www2.cesm.ucar.edu/). Supported releases are [CLM 4.0](http://www.cesm.ucar.edu/models/cesm1.2/clm/) and [CESM 1.2](http://www.cesm.ucar.edu/models/cesm1.2/).
 
 
 Documentation
