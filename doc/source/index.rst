@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to prescribeSM's documentation!
-=======================================
+prescribe Soil Moisture in the Community Land Model, version 4
+==============================================================
 
 Contents:
 
@@ -12,9 +12,11 @@ Contents:
    :maxdepth: 2
    
    introduction
-   compile
+   usage
+   installation
    SMforcing
    namelist
+   methods
    additional
 
 Indices and tables

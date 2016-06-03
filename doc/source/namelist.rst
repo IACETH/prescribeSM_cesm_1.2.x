@@ -10,17 +10,24 @@ The location of the :file:`run` directory is defined in :file:`$CASEROOT/env_run
 
 Namelist Options
 ----------------
-  
 pSMfile : string
   path to the history file containing SOILLIQ and SOILICE
+pSMtype : int
+ Defines how to prescribe SM, see :doc:`Methods to Prescribe Soil Moisture</methods>`.
 monthly : bool
-  If ``.true.`` assumes monthly mean SM is provided. If ``.false.`` uses daily input.
-pSMtype : int, {1, 2, 3}
- Defines how to prescribe SM:
-
- 1. Default: prescribe SOILLIQ and SOILICE.
- 2. Prescribe SM only if there is no SOILICE is present (never prescribes SOILICE). Lets the model decide if there is ICE or not at a certain gridpoint.
- 3. Use runoff (QOVER) to prescribe SM. Is currently work in progress.
+  If ``.false.`` uses daily input. If ``.true.`` assumes monthly mean SM is provided.
+interp_day : bool
+  If ``.false.`` uses the daily mean, if ``.true.`` linearly interpolates between daily mean. Applies only if daily input data is used (``monthly = .false.``).
+levstart : int, optional
+  First level to prescribe SM, default = 1.
+levstop : int, optional
+  Last level to prescribe SM, default = 10.
+nudge : float between 0. and 1., optional
+  Nudging parameter. Not tested. Default = 1 (i.e. no nudging).
+use_qdrai : bool, optional
+  Only for pSMtype XX. Do not use, default = ``.true.``.
+reservoir_capacity, float, optional
+  Only for pSMtype XX. Do not use, default = 0.
  
 .. WARNING::
    if you set monthly=.true. but have a daily SM input file it will still work (uses the first 12 days as the months)
