@@ -9,7 +9,7 @@ Features
 --------
 
 - Prescribe ``SOILLIQ`` (and ``SOILICE``) (-> SM) in CLM 4.0
-- Several methods prescribe SM
+- Several methods to prescribe SM
 - Prescribe SM globally or regionally
 - Prescribe daily mean or monthly mean SM (linear interpolation in between)
 - Conveniently define options via namelist
