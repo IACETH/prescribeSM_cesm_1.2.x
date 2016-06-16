@@ -7,7 +7,7 @@ prescribeSM CESM 1.2.x
 Documentation
 -------------
 
-The documentation is hosted on ReadTheDocs at: http://prescribesm-cesm-12x.readthedocs.io/
+The documentation is hosted on [ReadTheDocs](http://prescribesm-cesm-12.readthedocs.io/en/latest/).
 
 Source Code
 -----------
