@@ -25,9 +25,9 @@ levstop : int, optional
 nudge : float between 0. and 1., optional
   Nudging parameter. Not tested. Default = 1 (i.e. no nudging).
 use_qdrai : bool, optional
-  Only for pSMtype XX. Do not use, default = ``.true.``.
+  Only for pSMtype 3. Do not use, default = ``.true.``.
 reservoir_capacity, float, optional
-  Only for pSMtype XX. Do not use, default = 0.
+  Only for pSMtype 3. Do not use, default = 0.
  
 .. WARNING::
    if you set monthly=.true. but have a daily SM input file it will still work (uses the first 12 days as the months)
