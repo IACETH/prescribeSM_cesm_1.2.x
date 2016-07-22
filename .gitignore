@@ -1,6 +1,7 @@
 .svn
 
 #documentation
+docs/_build/
 build
 _static
 _templates
