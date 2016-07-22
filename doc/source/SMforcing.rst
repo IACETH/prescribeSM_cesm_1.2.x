@@ -24,7 +24,7 @@ Assume you want to output daily :term:`4D` files in ``history tape 2`` and daily
 
 Convert 4D to 3D
 ----------------
-If you only have your SM forcing file in :term:`4D` format it is possible to convert it to a :term:`3D` file.
+If you only have the SM forcing file in :term:`4D` format it is possible to convert it to a :term:`3D` file.
 A small python script that shows how to do this is given in the repository: 
 :file:`clm_col_to_xy_example.py`.
 
