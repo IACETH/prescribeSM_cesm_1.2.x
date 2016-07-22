@@ -450,8 +450,6 @@ module prescribeSoilMoistureMod
 
 ! =======================================================================================================================
 
-      ! USE only water from qflx_surf and qflx_drain (sub- and surface runoff) 
-
       else if (pSMtype == 5) then
 
         call endrun('initPrescribeSoilMoisture: pSMtype 5 does not exist')
