@@ -451,8 +451,44 @@ module prescribeSoilMoistureMod
 ! =======================================================================================================================
 
       else if (pSMtype == 5) then
+      ! FRACTION of LIQ and ICE
 
-        call endrun('initPrescribeSoilMoisture: pSMtype 5 does not exist')
+        do fc = 1, num_nolakec
+          c = filter_nolakec(fc)
+          l = clandunit(c)
+          if (ltype(l) == istsoil) then
+            do j = levstart, levstop
+              
+              ! only prescribe if all SL and SI values are >= 0
+              if (min(mh2osoi_liq2t(c,j,1), mh2osoi_ice2t(c,j,1), mh2osoi_liq2t(c,j,2), mh2osoi_ice2t(c,j,2)) .ge. 0_r8) then
+
+                ! obtain desired SL and SI at this timestep
+                SL = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
+                SI = timwt_soil(1)*mh2osoi_ice2t(c,j,1) + timwt_soil(2)*mh2osoi_ice2t(c,j,2)
+
+                ! prescribe total water
+                SM = SL + SI
+
+                if (h2osoi_liq(c,j) + h2osoi_ice(c,j) .eq. 0) then
+                  frac = 1._r8 ! all to water
+                else
+                  frac = h2osoi_liq(c,j) / (h2osoi_liq(c,j) + h2osoi_ice(c,j))
+                end if
+
+                frac = min(max(frac, 0._r8), 1._r8)
+
+                h2osoi_liq(c,j) = frac * SM
+                h2osoi_ice(c,j) = (1._r8 - frac) * SM
+
+                if (masterproc) then
+                  write(iulog,*) 'frac: ', frac, 'SM: ', SM
+                end if
+
+
+              end if
+            end do 
+          end if
+        end do
 
 ! =======================================================================================================================
 
