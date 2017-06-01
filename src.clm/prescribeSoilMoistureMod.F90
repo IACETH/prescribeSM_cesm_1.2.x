@@ -323,65 +323,68 @@ module prescribeSoilMoistureMod
                 exit ! leave do j = levstart, levstop
               end if
 
-              ! obtain desired SL and SI
-              SL = timwt_soil(1) * mh2osoi_liq2t(c, j, 1) + timwt_soil(2) * mh2osoi_liq2t(c, j, 2)
-              SI = timwt_soil(1) * mh2osoi_ice2t(c, j, 1) + timwt_soil(2) * mh2osoi_ice2t(c, j, 2)
+              if (min(mh2osoi_liq2t(c,j,1), mh2osoi_ice2t(c,j,1), mh2osoi_liq2t(c,j,2), mh2osoi_ice2t(c,j,2)) .ge. 0_r8) then
 
-              ! prescribe total water (important at places where there is no more soil ice)
-              SM = SL + SI
+                ! obtain desired SL and SI
+                SL = timwt_soil(1) * mh2osoi_liq2t(c, j, 1) + timwt_soil(2) * mh2osoi_liq2t(c, j, 2)
+                SI = timwt_soil(1) * mh2osoi_ice2t(c, j, 1) + timwt_soil(2) * mh2osoi_ice2t(c, j, 2)
 
-              ! SMdeficit
-              SMdeficit = max(SM - h2osoi_liq(c, j), 0._r8)
-              
-              ! is there a deficit?
-              if (SMdeficit .gt. 0._r8) then
+                ! prescribe total water (important at places where there is no more soil ice)
+                SM = SL + SI
+
+                ! SMdeficit
+                SMdeficit = max(SM - h2osoi_liq(c, j), 0._r8)
                 
-                ! RUNOFF
-                if (water_avail .gt. 0._r8) then
-                  ! how much can we add?
-                  SMassigned = min(water_avail, SMdeficit)
-
-                  ! add water
-                  h2osoi_liq(c,j) = h2osoi_liq(c,j) + SMassigned
-
-                  ! subtract from runoff (protect from rounding errors)
-
-                  ! according to the fraction available water
-                  qflx_surf(c) = max(qflx_surf(c) - frac * (SMassigned / dtime), 0._r8)
-                  ! if not use_qdrai: frac == 1
-                  qflx_drain(c) = max(qflx_drain(c) - (1._r8 - frac) * (SMassigned / dtime), 0._r8)
+                ! is there a deficit?
+                if (SMdeficit .gt. 0._r8) then
                   
-                  ! qflx_runoff = qflx_drain+qflx_surf+qflx_qrgwl
-                  qflx_runoff(c) = max(qflx_runoff(c) - SMassigned / dtime, 0._r8)
-                  
-                  ! also decrease available water
-                  water_avail = water_avail - SMassigned
-                end if ! (water_avail .gt. 0._r8)
+                  ! RUNOFF
+                  if (water_avail .gt. 0._r8) then
+                    ! how much can we add?
+                    SMassigned = min(water_avail, SMdeficit)
 
-                ! RESERVOIR
-                if (reservoir(c) > 0._r8) then
-                  ! get an update of the missing water
-                  SMdeficit = max(0._r8, SMdeficit - SMassigned)
+                    ! add water
+                    h2osoi_liq(c,j) = h2osoi_liq(c,j) + SMassigned
 
-                  ! how much can we add?
-                  SMassigned = min(reservoir(c), SMdeficit)
+                    ! subtract from runoff (protect from rounding errors)
 
-                  ! add water
-                  h2osoi_liq(c,j) = h2osoi_liq(c,j) + SMassigned                
+                    ! according to the fraction available water
+                    qflx_surf(c) = max(qflx_surf(c) - frac * (SMassigned / dtime), 0._r8)
+                    ! if not use_qdrai: frac == 1
+                    qflx_drain(c) = max(qflx_drain(c) - (1._r8 - frac) * (SMassigned / dtime), 0._r8)
+                    
+                    ! qflx_runoff = qflx_drain+qflx_surf+qflx_qrgwl
+                    qflx_runoff(c) = max(qflx_runoff(c) - SMassigned / dtime, 0._r8)
+                    
+                    ! also decrease available water
+                    water_avail = water_avail - SMassigned
+                  end if ! (water_avail .gt. 0._r8)
 
-                  ! update the reservoir
-                  reservoir(c) = max(0._r8, reservoir(c) - SMassigned)
-                end if ! reservoir(c) .gt. 0._r8
+                  ! RESERVOIR
+                  if (reservoir(c) > 0._r8) then
+                    ! get an update of the missing water
+                    SMdeficit = max(0._r8, SMdeficit - SMassigned)
 
-                ! check if water is available
-                if (water_avail <= 0._r8 .and. reservoir(c) <= 0._r8) then
-                  if (masterproc) then
-                    write(iulog,*) 'there is no more water on level: ', j
-                  end if
+                    ! how much can we add?
+                    SMassigned = min(reservoir(c), SMdeficit)
 
-                  exit
-                end if              
-              end if ! (SMdeficit .gt. 0._r8)
+                    ! add water
+                    h2osoi_liq(c,j) = h2osoi_liq(c,j) + SMassigned                
+
+                    ! update the reservoir
+                    reservoir(c) = max(0._r8, reservoir(c) - SMassigned)
+                  end if ! reservoir(c) .gt. 0._r8
+
+                  ! check if water is available
+                  if (water_avail <= 0._r8 .and. reservoir(c) <= 0._r8) then
+                    if (masterproc) then
+                      write(iulog,*) 'there is no more water on level: ', j
+                    end if
+
+                    exit
+                  end if              
+                end if ! (SMdeficit .gt. 0._r8)
+              end if ! (min(mh2osoi_liq2t(c,j,1), ...) .ge. 0_r8) then
             end do ! j = 1, nlevgrnd
 
 
