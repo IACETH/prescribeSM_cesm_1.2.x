@@ -121,7 +121,8 @@ character(len=nlen) function interpret_filename_spec( filename_spec, number, pre
          previous = prev
       end if
       if ( previous ) then
-         call get_prev_date(year, month, day, ncsec)
+         ! call get_prev_date(year, month, day, ncsec)
+         call endrun ('get_prev_date not available in clm')
       else
          call get_curr_date(year, month, day, ncsec)
       end if
