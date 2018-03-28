@@ -664,7 +664,7 @@ module prescribeSoilMoistureMod
         end if
 
         if (one_file_per_timestep) then
-          if (monthly) .or. (interp_day) then
+          if ((monthly) .or. (interp_day)) then
             call endrun(trim(subname)//'"monthly" and "interp_day" must be .false. if "one_file_per_timestep" is .true.')
           end if
         end if
@@ -899,7 +899,7 @@ module prescribeSoilMoistureMod
         write(iulog,*) 'from file: ', pSMfile_local
       endif ! masterproc
       
-      if (interp_day) .or. (monthly) then
+      if ((interp_day) .or. (monthly)) then
         k_end = 2
       else
         k_end = 1
