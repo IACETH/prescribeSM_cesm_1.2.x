@@ -37,14 +37,15 @@ module prescribeSoilMoistureMod
   real(r8), private, allocatable :: mh2osoi_liq2t(:, :, :) ! liquid soil water for interpolation (2 months) read from input files
   real(r8), private, allocatable :: mh2osoi_ice2t(:, :, :) ! frozen soil water for interpolation (2 months) read from input files
 
-  logical, private            :: monthly                    ! if .true. -> monthly, else daily
-  logical, private            :: interp_day = .true.        ! time interpolation when monthly == false
-  character(len=256), private :: pSMfile                    ! file name mit SM data to prescribe
-  integer, private            :: pSMtype = 1                ! how to prescribe SM [default = 1] 
-  real(r8), private           :: reservoir_capacity = 0._r8 ! capacity of the reservoir storing water for dry periods
-  integer, private            :: levstart = 1               ! start level prescribing SM
-  integer, private            :: levstop = nlevsoi          ! end level prescribing SM
-  logical, private            :: use_qdrai = .true.         ! use qdrai in pSMtype3
+  logical, private            :: monthly                         ! if .true. -> monthly, else daily
+  logical, private            :: interp_day = .true.             ! time interpolation when monthly == false
+  character(len=256), private :: pSMfile                         ! file name mit SM data to prescribe
+  integer, private            :: pSMtype = 1                     ! how to prescribe SM [default = 1] 
+  real(r8), private           :: reservoir_capacity = 0._r8      ! capacity of the reservoir storing water for dry periods
+  integer, private            :: levstart = 1                    ! start level prescribing SM
+  integer, private            :: levstop = nlevsoi               ! end level prescribing SM
+  logical, private            :: use_qdrai = .true.              ! use qdrai in pSMtype3
+  logical, private            :: one_file_per_timestep = .true.  ! use one file for each timestep
 
   ! REVISION HISTORY:
   ! Created by 
@@ -609,7 +610,7 @@ module prescribeSoilMoistureMod
 
       ! Input datasets
       namelist /prescribe_sm/  &
-           pSMfile, monthly, pSMtype, reservoir_capacity, levstart, levstop, use_qdrai, interp_day
+           pSMfile, monthly, pSMtype, reservoir_capacity, levstart, levstop, use_qdrai, interp_day, one_file_per_timestep
 
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       ! CAREFUL: IF YOU USE A DAILY pSMfile BUT SET monthly = .true.  !
@@ -636,15 +637,16 @@ module prescribeSoilMoistureMod
 
 
       if (masterproc) then
-        write(iulog,*) 'Read pSMfile from namelist:', trim(pSMfile)
-        write(iulog,*) 'Read monthly from namelist:', monthly
-        write(iulog,*) 'Read interp_day from namelist:', interp_day
-        write(iulog,*) 'Read pSMtype from namelist:', pSMtype
-        write(iulog,*) 'Read reservoir_capacity from namelist:', reservoir_capacity
-        write(iulog,*) 'Read levstart from namelist:', levstart
-        write(iulog,*) 'Read levstop from namelist:', levstop
-        write(iulog,*) 'Read use_qdrai from namelist:', use_qdrai
-  
+        write(iulog,*) 'Read "pSMfile" from namelist:', trim(pSMfile)
+        write(iulog,*) 'Read "monthly" from namelist:', monthly
+        write(iulog,*) 'Read "interp_day" from namelist:', interp_day
+        write(iulog,*) 'Read "pSMtype" from namelist:', pSMtype
+        write(iulog,*) 'Read "reservoir_capacity" from namelist:', reservoir_capacity
+        write(iulog,*) 'Read "levstart" from namelist:', levstart
+        write(iulog,*) 'Read "levstop" from namelist:', levstop
+        write(iulog,*) 'Read "use_qdrai" from namelist:', use_qdrai
+        write(iulog,*) 'Read "one_file_per_timestep" from namelist:', one_file_per_timestep
+
         if (levstart .gt. levstop) then
           call endrun(trim(subname)//'levstop must be bigger than levstart')
         end if
@@ -660,6 +662,13 @@ module prescribeSoilMoistureMod
         if (reservoir_capacity < 0._r8) then
           call endrun(trim(subname)//'reservoir_capacity must be >= 0')
         end if
+
+        if (one_file_per_timestep) then
+          if (monthly) .or. (interp_day) then
+            call endrun(trim(subname)//'"monthly" and "interp_day" must be .false. if "one_file_per_timestep" is .true.')
+          end if
+        end if
+
 
 
         if (pSMtype == 1) then
@@ -785,13 +794,19 @@ module prescribeSoilMoistureMod
           if (TimeStep(2) > 365) TimeStep(2) = 1
 
         else ! no interpolation during one day
-          TimeStep(1) = doy
-          TimeStep(2) = 1 ! constant / not used
+          
+          if (one_file_per_timestep) then
+            TimeStep(1) = 1 ! always one
+            TimeStep(2) = 1 ! constant / not used
+          else
+            TimeStep(1) = doy
+            TimeStep(2) = 1 ! constant / not used
+          endif
 
-          timwt_soil(1) = 1._r8
-          timwt_soil(2) = 0._r8
+          timwt_soil(1) = 1._r8 ! all weight
+          timwt_soil(2) = 0._r8 ! no weight
         
-        end if ! interpe_day
+        end if ! interp_day
       endif ! monthly
 
       
@@ -827,7 +842,7 @@ module prescribeSoilMoistureMod
       use clm_varpar,   only : nlevgrnd
       use clm_varcon,   only : istsoil
       use fileutils,    only : getfil
-
+      use filenames,    only : interpret_filename_spec
       
   ! !ARGUMENTS:
       implicit none
@@ -852,12 +867,16 @@ module prescribeSoilMoistureMod
       integer :: ncolumn_i                  ! number of columns
       integer :: begc,endc                  ! beg and end local c index
       integer :: ier,ret                    ! error code
+      integer :: k_end
       logical :: readvar
 
       real(r8), pointer :: mh2osoi_liq(:,:)  ! liquid soil water content read from input file
       real(r8), pointer :: mh2osoi_ice(:,:)  ! frozen soil water content read from input file
       character(len=32) :: subname = 'readSoilMoisture'
       character(len=32) :: cTimeStep ! string for the choosen time step (daily, monthly)
+
+      character(len=256), private :: pSMfile_local ! file name mit SM data to prescribe
+
   !-----------------------------------------------------------------------
 
 
@@ -883,6 +902,22 @@ module prescribeSoilMoistureMod
         cTimeStep = 'day'
       endif
 
+      if (one_file_per_timestep) then
+        ! parse file name according to date/time of model
+        ! %y -> 2005 %m -> 05 %d -> 20
+        pSMfile_local = interpret_filename_spec( pSMfile )
+
+        ! ensure the string has changed
+        if (trim(pSMfile_local) == trim(pSMfile)) then
+            call endrun(trim(subname)//'set "one_file_per_timestep" to .false. when not providing one file per timestep')
+        endif
+
+      else
+        pSMfile_local = pSMfile
+      end if
+
+
+
       ! ----------------------------------------------------------------------
       ! Open monthly soil moisture file
       ! Read data from column
@@ -891,13 +926,19 @@ module prescribeSoilMoistureMod
       if (masterproc) then
         write(iulog,*) 'Attempting to read ', trim(cTimeStep), 'ly soil moisture data...'
         write(iulog,*) 'month = ', kmo, ' day = ', kda
+        write(iulog,*) 'from file: ', pSMfile_local
       endif ! masterproc
+      
+      if (interp_day) .or. (monthly) then
+        k_end = 2
+      else
+        k_end = 1
+      endif
 
-
-      do k=1,2  ! loop over months/ days and read SM data
+      do k=1,k_end  ! loop over months/ days and read SM data
 
           ! get file
-          call getfil(trim(pSMfile), locfn, 0)
+          call getfil(trim(pSMfile_local), locfn, 0)
           call ncd_pio_openfile (ncid, trim(locfn), 0)
 
 
@@ -909,12 +950,12 @@ module prescribeSoilMoistureMod
 
           call ncd_io(ncid=ncid, varname='SOILLIQ', flag='read', data=mh2osoi_liq, dim1name=namec, &
             nt=TimeStep(k), readvar=readvar)
-          if (.not. readvar) call endrun(trim(subname) // ' ERROR: SOILLIQ NOT on pSMfile' // trim(pSMfile))
+          if (.not. readvar) call endrun(trim(subname) // ' ERROR: SOILLIQ NOT on pSMfile' // trim(pSMfile_local))
           
 
           call ncd_io(ncid=ncid, varname='SOILICE', flag='read', data=mh2osoi_ice, dim1name=namec, &
             nt=TimeStep(k), readvar=readvar)
-          if (.not. readvar) call endrun(trim(subname) // ' ERROR: SOILICE NOT on pSMfile ' // trim(pSMfile))     
+          if (.not. readvar) call endrun(trim(subname) // ' ERROR: SOILICE NOT on pSMfile ' // trim(pSMfile_local))     
 
         call ncd_pio_closefile(ncid)
 
