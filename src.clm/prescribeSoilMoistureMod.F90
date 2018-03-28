@@ -845,7 +845,7 @@ module prescribeSoilMoistureMod
       character(len=32) :: subname = 'readSoilMoisture'
       character(len=32) :: cTimeStep ! string for the choosen time step (daily, monthly)
 
-      character(len=256), private :: pSMfile_local ! file name mit SM data to prescribe
+      character(len=256) :: pSMfile_local ! file name mit SM data to prescribe
 
   !-----------------------------------------------------------------------
 
