@@ -852,8 +852,6 @@ module prescribeSoilMoistureMod
       integer :: ncolumn_i                  ! number of columns
       integer :: begc,endc                  ! beg and end local c index
       integer :: ier,ret                    ! error code
-      integer :: closelatidx,closelonidx
-      real(r8):: closelat,closelon
       logical :: readvar
 
       real(r8), pointer :: mh2osoi_liq(:,:)  ! liquid soil water content read from input file
