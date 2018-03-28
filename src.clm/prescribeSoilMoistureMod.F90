@@ -221,7 +221,6 @@ module prescribeSoilMoistureMod
 ! =======================================================================================================================
 
       ! CLASSICAL: prescribe SOILLIQ and SOILICE
-      ! NOW INCLUDES NUDGING
       if (pSMtype == 1) then
 
         do fc = 1, num_nolakec
@@ -237,7 +236,6 @@ module prescribeSoilMoistureMod
                 SL = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
                 SI = timwt_soil(1)*mh2osoi_ice2t(c,j,1) + timwt_soil(2)*mh2osoi_ice2t(c,j,2)
 
-                ! including nudging
                 h2osoi_liq(c,j) = SL
                 h2osoi_ice(c,j) = SI
               end if ! liq >= 0
@@ -273,7 +271,6 @@ module prescribeSoilMoistureMod
                 ! prescribe total water (at places where there is no more soil ice)
                 SM = SL + SI
 
-                ! including nudging (important to avoid jumps)
                 h2osoi_liq(c,j) = SM
               end if
             end do 
@@ -442,7 +439,6 @@ module prescribeSoilMoistureMod
                 ! prescribe total water (at places where there is no more soil ice)
                 SM = SL + SI
 
-                ! including nudging (important to avoid jumps)
                 SM = SM
                 ! ONLY PRESCRIBE IF LESS THAN
                 h2osoi_liq(c,j) = max(h2osoi_liq(c,j), SM)
