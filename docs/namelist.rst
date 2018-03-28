@@ -22,8 +22,6 @@ levstart : int, optional
   First level to prescribe SM, default = 1.
 levstop : int, optional
   Last level to prescribe SM, default = 10.
-nudge : float between 0. and 1., optional
-  Nudging parameter. Not tested. Default = 1 (i.e. no nudging).
 use_qdrai : bool, optional
   Only for pSMtype 3. Do not use, default = ``.true.``.
 reservoir_capacity, float, optional
