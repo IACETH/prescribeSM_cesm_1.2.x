@@ -813,7 +813,7 @@ module prescribeSoilMoistureMod
   ! !IROUTINE: readSoilMoisture
   !
   ! !INTERFACE:
-    subroutine readSoilMoisture (kmo, kda, months_soil)
+    subroutine readSoilMoisture (kmo, kda, TimeStep)
   !
   ! !DESCRIPTION:
   ! Read monthly soil moisture data for two consec. months or days
@@ -834,7 +834,7 @@ module prescribeSoilMoistureMod
 
       integer, intent(in) :: kmo            ! month (1, ..., 12)
       integer, intent(in) :: kda            ! day of month (1, ..., 31)
-      integer, intent(in) :: months_soil(2) ! months to be interpolated (1 to 12)
+      integer, intent(in) :: TimeStep(2) ! months to be interpolated (1 to 12)
   !
   ! !REVISION HISTORY:
   ! Created by Ruth Lorenz
@@ -903,17 +903,17 @@ module prescribeSoilMoistureMod
 
           if (masterproc) then
               write(iulog,*) 'Before read '
-              write(iulog,*) trim(cTimeStep), '(k) ', months_soil(k)
+              write(iulog,*) trim(cTimeStep), '(k) ', TimeStep(k)
           endif ! masterproc
 
 
           call ncd_io(ncid=ncid, varname='SOILLIQ', flag='read', data=mh2osoi_liq, dim1name=namec, &
-            nt=months_soil(k), readvar=readvar)
+            nt=TimeStep(k), readvar=readvar)
           if (.not. readvar) call endrun(trim(subname) // ' ERROR: SOILLIQ NOT on pSMfile' // trim(pSMfile))
           
 
           call ncd_io(ncid=ncid, varname='SOILICE', flag='read', data=mh2osoi_ice, dim1name=namec, &
-            nt=months_soil(k), readvar=readvar)
+            nt=TimeStep(k), readvar=readvar)
           if (.not. readvar) call endrun(trim(subname) // ' ERROR: SOILICE NOT on pSMfile ' // trim(pSMfile))     
 
         call ncd_pio_closefile(ncid)
@@ -921,20 +921,20 @@ module prescribeSoilMoistureMod
 
         if (masterproc) then
             write(iulog,*) 'Successfully read ',  trim(cTimeStep), 'ly soil moisture data for'
-            write(iulog,*) cTimeStep, ' ', months_soil(k)
+            write(iulog,*) cTimeStep, ' ', TimeStep(k)
         end if
 
 
-         ! store data directly in clmtype structure
-         do c = begc, endc
-            l = clandunit(c)
-            if (ltype(l) == istsoil) then 
-               do j = 1, nlevsoi
-                  mh2osoi_liq2t(c, j, k) = mh2osoi_liq(c, j)
-                  mh2osoi_ice2t(c, j, k) = mh2osoi_ice(c, j)
-               end do
-            end if
-         end do   ! end of loop over columns
+        ! store data directly in clmtype structure
+        do c = begc, endc
+          l = clandunit(c)
+          if (ltype(l) == istsoil) then 
+            do j = 1, nlevsoi
+              mh2osoi_liq2t(c, j, k) = mh2osoi_liq(c, j)
+              mh2osoi_ice2t(c, j, k) = mh2osoi_ice(c, j)
+            end do
+          end if
+        end do   ! end of loop over columns
 
       end do   ! end of loop over months
       
