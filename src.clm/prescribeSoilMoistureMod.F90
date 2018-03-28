@@ -669,36 +669,6 @@ module prescribeSoilMoistureMod
           end if
         end if
 
-
-
-        if (pSMtype == 1) then
-          write(iulog,*) 'pSMtype: prescribe both (DEFAULT)'
-          write(iulog,*) 'SOILICE AND SOILLIQ is prescribed, whatever the conditions'
-          write(iulog,*) 'for any gridcell, level, timestep where LIQ !OR! ICE is < 0,'
-          write(iulog,*) 'neither is prescribed (if only one is prescribed it yields unphysical values).'
-
-        else if (pSMtype == 2) then
-          write(iulog,*) 'pSMtype: SOILLIQ if no SOILICE'
-          write(iulog,*) 'ONLY SOILLIQ is prescribed. SOILICE is calculated.'
-          write(iulog,*) '-> can NOT prescribe SOILICE (is calculated interactively)'
-          write(iulog,*) '-> if SOILICE is PRESENT -> SOILLIQ is INTERACTIVE'
-        
-        else if (pSMtype == 3) then
-          ! write(iulog,*) 'pSMtype: FRACTION'
-          ! write(iulog,*) 'At every timestep the sotal SM (SOILLIQ + SOILICE) is'
-          ! write(iulog,*) 'prescribed. The fraction that becomes SOILLIQ and '
-          ! write(iulog,*) 'SOILICE. Is determined by the current ICE and LIQ '
-          ! write(iulog,*) 'fraction.'
-          ! write(iulog,*) 'fr = SOILLIQ^n / (SOILLIQ^n + SOILICE^n), where n = TimeStep'
-          ! write(iulog,*) 'SOILLIQ^n+1 = fr * (ICE + LIQ)'
-          ! write(iulog,*) 'SOILICE^n+1 = (1 - fr) * (ICE + LIQ)'
-          ! write(iulog,*) 'where LIQ and ICE are read from the file'
-
-        else
-          !call endrun(trim(subname)//'pSMtype namelist option must be one of 1, 2,3!')
-        endif ! pSMtype
-
-
       endif ! masterproc
 
     end subroutine initPrescribeSoilMoisture
