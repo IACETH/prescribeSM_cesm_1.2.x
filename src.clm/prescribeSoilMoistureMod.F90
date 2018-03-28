@@ -275,6 +275,7 @@ module prescribeSoilMoistureMod
 
                 ! including nudging (important to avoid jumps)
                 h2osoi_liq(c,j) = SM
+              end if
             end do 
           end if
         end do
