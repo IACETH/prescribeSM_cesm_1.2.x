@@ -7,10 +7,11 @@ module filenames
 ! other modules or routines will store the actual filenames used, but
 ! this module is used to determine the names.
 
-use time_manager, only: get_curr_date, get_prev_date
+use clm_time_manager, only : get_curr_date
+! use time_manager, only: get_curr_date, get_prev_date
 use shr_kind_mod, only: shr_kind_cs, shr_kind_cl
 use abortutils,   only: endrun
-use cam_logfile,  only: iulog
+use clm_varctl,   only : iulog
 
 implicit none
 private
