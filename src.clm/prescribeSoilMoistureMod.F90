@@ -41,7 +41,6 @@ module prescribeSoilMoistureMod
   logical, private            :: interp_day = .true.        ! time interpolation when monthly == false
   character(len=256), private :: pSMfile                    ! file name mit SM data to prescribe
   integer, private            :: pSMtype = 1                ! how to prescribe SM [default = 1] 
-  real(r8), private           :: nudge = 1._r8              ! nudging
   real(r8), private           :: reservoir_capacity = 0._r8 ! capacity of the reservoir storing water for dry periods
   integer, private            :: levstart = 1               ! start level prescribing SM
   integer, private            :: levstop = nlevsoi          ! end level prescribing SM
@@ -238,8 +237,8 @@ module prescribeSoilMoistureMod
                 SI = timwt_soil(1)*mh2osoi_ice2t(c,j,1) + timwt_soil(2)*mh2osoi_ice2t(c,j,2)
 
                 ! including nudging
-                h2osoi_liq(c,j) = SL * nudge + (1._r8 - nudge) * h2osoi_liq(c,j)
-                h2osoi_ice(c,j) = SI * nudge + (1._r8 - nudge) * h2osoi_ice(c,j)
+                h2osoi_liq(c,j) = SL
+                h2osoi_ice(c,j) = SI
               end if ! liq >= 0
             end do ! j = 1, nlevgrnd
           end if
@@ -274,8 +273,7 @@ module prescribeSoilMoistureMod
                 SM = SL + SI
 
                 ! including nudging (important to avoid jumps)
-                h2osoi_liq(c,j) = SM * nudge + (1._r8 - nudge) * h2osoi_liq(c,j)
-              end if
+                h2osoi_liq(c,j) = SM
             end do 
           end if
         end do
@@ -443,7 +441,7 @@ module prescribeSoilMoistureMod
                 SM = SL + SI
 
                 ! including nudging (important to avoid jumps)
-                SM = SM * nudge + (1._r8 - nudge) * h2osoi_liq(c,j)
+                SM = SM
                 ! ONLY PRESCRIBE IF LESS THAN
                 h2osoi_liq(c,j) = max(h2osoi_liq(c,j), SM)
               end if
@@ -611,7 +609,7 @@ module prescribeSoilMoistureMod
 
       ! Input datasets
       namelist /prescribe_sm/  &
-           pSMfile, monthly, pSMtype, nudge, reservoir_capacity, levstart, levstop, use_qdrai, interp_day
+           pSMfile, monthly, pSMtype, reservoir_capacity, levstart, levstop, use_qdrai, interp_day
 
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       ! CAREFUL: IF YOU USE A DAILY pSMfile BUT SET monthly = .true.  !
@@ -642,17 +640,11 @@ module prescribeSoilMoistureMod
         write(iulog,*) 'Read monthly from namelist:', monthly
         write(iulog,*) 'Read interp_day from namelist:', interp_day
         write(iulog,*) 'Read pSMtype from namelist:', pSMtype
-        write(iulog,*) 'Read nudge from namelist:', nudge
         write(iulog,*) 'Read reservoir_capacity from namelist:', reservoir_capacity
         write(iulog,*) 'Read levstart from namelist:', levstart
         write(iulog,*) 'Read levstop from namelist:', levstop
         write(iulog,*) 'Read use_qdrai from namelist:', use_qdrai
   
-        if (nudge .lt. 0._r8 .or. nudge .gt. 1._r8) then
-          call endrun(trim(subname)//'nudge must be in 0..1!')
-        end if
-
-
         if (levstart .gt. levstop) then
           call endrun(trim(subname)//'levstop must be bigger than levstart')
         end if
