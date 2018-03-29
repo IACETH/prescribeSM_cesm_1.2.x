@@ -190,7 +190,7 @@ module prescribeSoilMoistureMod
 
         ! make sure irrig is 0 (and not nan)
         qflx_irrig(:) = 0._r8
-      end if ! FirstCall
+      endif ! FirstCall
 
       ! get time weight and possibly a new time step
       call interpSoilMoisture()
@@ -215,7 +215,7 @@ module prescribeSoilMoistureMod
               soilliq_prescribed(c, j) = h2osoi_liq(c,j)
               soilice_prescribed(c, j) = h2osoi_ice(c,j)
           end do ! j = 1, nlevgrnd
-        end if
+        endif
       end do ! fc = 1, num_nolakec
 
 ! =======================================================================================================================
@@ -238,9 +238,9 @@ module prescribeSoilMoistureMod
 
                 h2osoi_liq(c,j) = SL
                 h2osoi_ice(c,j) = SI
-              end if ! liq >= 0
+              endif ! liq >= 0
             end do ! j = 1, nlevgrnd
-          end if
+          endif
         end do ! fc = 1, num_nolakec
 
 ! =======================================================================================================================
@@ -259,7 +259,7 @@ module prescribeSoilMoistureMod
               ! only overwrite liq if no ice is present
               if (t_soisno(c,j) <= SHR_CONST_TKFRZ) then
                 exit ! leave do j = levstart, levstop
-              end if
+              endif
               
               ! only prescribe if all SL and SI values are >= 0
               if (min(mh2osoi_liq2t(c,j,1), mh2osoi_ice2t(c,j,1), mh2osoi_liq2t(c,j,2), mh2osoi_ice2t(c,j,2)) .ge. 0_r8) then
@@ -272,9 +272,9 @@ module prescribeSoilMoistureMod
                 SM = SL + SI
 
                 h2osoi_liq(c,j) = SM
-              end if
+              endif
             end do 
-          end if
+          endif
         end do
 
 ! =======================================================================================================================
@@ -293,20 +293,20 @@ module prescribeSoilMoistureMod
             else
               ! total available water (ignoring qflx_qrgwl)
               water_avail = (qflx_surf(c)) * dtime
-            end if
+            endif
 
             ! water available? (stop div0 errors)
             if (water_avail .gt. 0._r8) then
               ! for subtracting water from qflx_surf and qflx_drain
               frac = (qflx_surf(c) * dtime) / water_avail
-            end if
+            endif
 
             if (masterproc) then
                 write(iulog,*) '-----------------------------'
                 write(iulog,*) 'Start New Gridpoint'
                 write(iulog,*) 'Max water, water_avail: ', water_avail
                 write(iulog,*) 'Reservoir: ', reservoir(c)
-            end if
+            endif
                       
             do j = levstart, levstop
             
@@ -315,10 +315,10 @@ module prescribeSoilMoistureMod
               if (t_soisno(c,j) <= SHR_CONST_TKFRZ) then
                 if (masterproc) then
                   write(iulog,*) 'there is ice on level: ', j
-                end if
+                endif
 
                 exit ! leave do j = levstart, levstop
-              end if
+              endif
 
               if (min(mh2osoi_liq2t(c,j,1), mh2osoi_ice2t(c,j,1), mh2osoi_liq2t(c,j,2), mh2osoi_ice2t(c,j,2)) .ge. 0_r8) then
 
@@ -355,7 +355,7 @@ module prescribeSoilMoistureMod
                     
                     ! also decrease available water
                     water_avail = water_avail - SMassigned
-                  end if ! (water_avail .gt. 0._r8)
+                  endif ! (water_avail .gt. 0._r8)
 
                   ! RESERVOIR
                   if (reservoir(c) > 0._r8) then
@@ -370,18 +370,18 @@ module prescribeSoilMoistureMod
 
                     ! update the reservoir
                     reservoir(c) = max(0._r8, reservoir(c) - SMassigned)
-                  end if ! reservoir(c) .gt. 0._r8
+                  endif ! reservoir(c) .gt. 0._r8
 
                   ! check if water is available
                   if (water_avail <= 0._r8 .and. reservoir(c) <= 0._r8) then
                     if (masterproc) then
                       write(iulog,*) 'there is no more water on level: ', j
-                    end if
+                    endif
 
                     exit
-                  end if              
-                end if ! (SMdeficit .gt. 0._r8)
-              end if ! (min(mh2osoi_liq2t(c,j,1), ...) .ge. 0_r8) then
+                  endif              
+                endif ! (SMdeficit .gt. 0._r8)
+              endif ! (min(mh2osoi_liq2t(c,j,1), ...) .ge. 0_r8) then
             end do ! j = 1, nlevgrnd
 
 
@@ -405,9 +405,9 @@ module prescribeSoilMoistureMod
               ! qflx_runoff = qflx_drain+qflx_surf+qflx_qrgwl
               qflx_runoff(c) = max(qflx_runoff(c) - SMassigned / dtime, 0._r8)
 
-            end if
+            endif
 
-          end if ! istsoil
+          endif ! istsoil
         end do ! fc = 1, num_nolakec
 
 ! =======================================================================================================================
@@ -427,7 +427,7 @@ module prescribeSoilMoistureMod
               ! only overwrite liq if no ice is present
               if (t_soisno(c,j) <= SHR_CONST_TKFRZ) then
                 exit ! leave do j = levstart, levstop
-              end if
+              endif
               
               ! only prescribe if all SL and SI values are >= 0
               if (min(mh2osoi_liq2t(c,j,1), mh2osoi_ice2t(c,j,1), mh2osoi_liq2t(c,j,2), mh2osoi_ice2t(c,j,2)) .ge. 0_r8) then
@@ -442,9 +442,9 @@ module prescribeSoilMoistureMod
                 SM = SM
                 ! ONLY PRESCRIBE IF LESS THAN
                 h2osoi_liq(c,j) = max(h2osoi_liq(c,j), SM)
-              end if
+              endif
             end do 
-          end if
+          endif
         end do
 
 ! =======================================================================================================================
@@ -472,7 +472,7 @@ module prescribeSoilMoistureMod
                   frac = 1._r8 ! all to water
                 else
                   frac = h2osoi_liq(c,j) / (h2osoi_liq(c,j) + h2osoi_ice(c,j))
-                end if
+                endif
 
                 frac = min(max(frac, 0._r8), 1._r8)
 
@@ -481,12 +481,12 @@ module prescribeSoilMoistureMod
 
                 if (masterproc) then
                   write(iulog,*) 'frac: ', frac, 'SM: ', SM
-                end if
+                endif
 
 
-              end if
+              endif
             end do 
-          end if
+          endif
         end do
 
 ! =======================================================================================================================
@@ -518,10 +518,10 @@ module prescribeSoilMoistureMod
 
                   if (masterproc) then
                     write(iulog,*) 'there is ice on level: ', j
-                  end if
+                  endif
 
                   exit
-                end if
+                endif
 
                 ! desired SM state at this level
                 SM = timwt_soil(1)*mh2osoi_liq2t(c,j,1) + timwt_soil(2)*mh2osoi_liq2t(c,j,2)
@@ -536,7 +536,7 @@ module prescribeSoilMoistureMod
               if (masterproc) then
                 write(iulog,*) 'qflx_irrig(c) ',  qflx_irrig(c)
                 write(iulog,*) 'qflx_surf(c) ',  qflx_surf(c)
-              end if
+              endif
 
               ! restrict irrigation to available water
               qflx_irrig(c) = max(qflx_surf(c), qflx_irrig(c))
@@ -545,12 +545,12 @@ module prescribeSoilMoistureMod
               qflx_surf(c) = qflx_surf(c) - qflx_irrig(c)
               qflx_runoff(c) = qflx_runoff(c) - qflx_irrig(c)
 
-            end if ! gt 0 and not spval
-          end if ! istsoil
+            endif ! gt 0 and not spval
+          endif ! istsoil
         end do ! fc = 1, num_nolakec
 
 
-      end if ! pSMtype
+      endif ! pSMtype
 
 
 ! =======================================================================================================================
@@ -565,7 +565,7 @@ module prescribeSoilMoistureMod
               soilliq_prescribed(c, j) = h2osoi_liq(c,j) - soilliq_prescribed(c, j)
               soilice_prescribed(c, j) = h2osoi_ice(c,j) - soilice_prescribed(c, j)
           end do ! j = 1, nlevgrnd
-        end if
+        endif
       end do ! fc = 1, num_nolakec
 
     end subroutine prescribeSoilMoisture
@@ -646,25 +646,25 @@ module prescribeSoilMoistureMod
 
         if (levstart .gt. levstop) then
           call endrun(trim(subname)//'levstop must be bigger than levstart')
-        end if
+        endif
 
         if (max(levstart,  levstop) .gt. nlevsoi) then
           call endrun(trim(subname)//'levstop/ start must not exceed nlevsoi (10)')
-        end if
+        endif
 
         if (min(levstart,  levstop) .lt. 1) then
           call endrun(trim(subname)//'levstop/ start must not be smaller than 1')
-        end if
+        endif
 
         if (reservoir_capacity < 0._r8) then
           call endrun(trim(subname)//'reservoir_capacity must be >= 0')
-        end if
+        endif
 
         if (one_file_per_timestep) then
           if ((monthly) .or. (interp_day)) then
             call endrun(trim(subname)//'"monthly" and "interp_day" must be .false. if "one_file_per_timestep" is .true.')
-          end if
-        end if
+          endif
+        endif
 
       endif ! masterproc
 
@@ -722,14 +722,14 @@ module prescribeSoilMoistureMod
         offset = int(dtime)
       else
         offset = - int(dtime / 2._r8)
-      end if
+      endif
 
 
       if ( is_perpetual() ) then
          call get_perp_date(kyr, kmo, kda, ksec, offset=offset)
       else
          call get_curr_date(kyr, kmo, kda, ksec, offset=offset)
-      end if
+      endif
 
       if (monthly) then ! interpolate monthly data
 
@@ -777,14 +777,14 @@ module prescribeSoilMoistureMod
           timwt_soil(1) = 1._r8 ! all weight
           timwt_soil(2) = 0._r8 ! no weight
         
-        end if ! interp_day
+        endif ! interp_day
       endif ! monthly
 
       
       if (TimeStep_old /= TimeStep_current) then
         call readSoilMoisture (kmo, kda, TimeStep)
         TimeStep_old = TimeStep(1)
-      end if
+      endif
 
     end subroutine interpSoilMoisture
 
@@ -865,7 +865,7 @@ module prescribeSoilMoistureMod
       if (ier /= 0) then
          write(iulog, *) subname, 'allocation big error '
          call endrun()
-      end if
+      endif
 
       if (monthly) then
         cTimeStep = 'month'
@@ -885,7 +885,7 @@ module prescribeSoilMoistureMod
 
       else
         pSMfile_local = pSMfile
-      end if
+      endif
 
 
 
@@ -934,7 +934,7 @@ module prescribeSoilMoistureMod
         if (masterproc) then
             write(iulog,*) 'Successfully read ',  trim(cTimeStep), 'ly soil moisture data for'
             write(iulog,*) cTimeStep, ' ', TimeStep(k)
-        end if
+        endif
 
 
         ! store data directly in clmtype structure
@@ -945,7 +945,7 @@ module prescribeSoilMoistureMod
               mh2osoi_liq2t(c, j, k) = mh2osoi_liq(c, j)
               mh2osoi_ice2t(c, j, k) = mh2osoi_ice(c, j)
             end do
-          end if
+          endif
         end do   ! end of loop over columns
 
       end do   ! end of loop over months
