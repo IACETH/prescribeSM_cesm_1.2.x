@@ -703,6 +703,7 @@ module prescribeSoilMoistureMod
       real(r8):: t           ! a fraction: kda/ndaypm
       integer :: it(2)       ! month 1 and month 2 (step 1)
       integer :: TimeStep(2) ! months to be interpolated (1 to 12)
+      integer :: TimeStep_current
       integer :: doy         ! day of year (1..365)    
       integer :: offset      ! how much must we shift time?
 
@@ -741,7 +742,7 @@ module prescribeSoilMoistureMod
           if (TimeStep(2) > 12) TimeStep(2) = 1
           timwt_soil(1) = (it(1)+0.5_r8) - t
           timwt_soil(2) = 1._r8-timwt_soil(1)
-
+          TimeStep_current = TimeStep(1)
       else ! interpolate daily data
         doy = cdaypm(kmo) + kda
         if (interp_day) then
@@ -759,7 +760,7 @@ module prescribeSoilMoistureMod
 
           if (TimeStep(1) < 1) TimeStep(1) = 365
           if (TimeStep(2) > 365) TimeStep(2) = 1
-
+          TimeStep_current = TimeStep(1)
         else ! no interpolation during one day
           
           if (one_file_per_timestep) then
@@ -770,6 +771,9 @@ module prescribeSoilMoistureMod
             TimeStep(2) = 1 ! constant / not used
           endif
 
+          ! so that we know if we need to read a new file
+          TimeStep_current = doy
+
           timwt_soil(1) = 1._r8 ! all weight
           timwt_soil(2) = 0._r8 ! no weight
         
@@ -777,7 +781,7 @@ module prescribeSoilMoistureMod
       endif ! monthly
 
       
-      if (TimeStep_old /= TimeStep(1)) then
+      if (TimeStep_old /= TimeStep_current) then
         call readSoilMoisture (kmo, kda, TimeStep)
         TimeStep_old = TimeStep(1)
       end if
@@ -814,8 +818,8 @@ module prescribeSoilMoistureMod
   ! !ARGUMENTS:
       implicit none
 
-      integer, intent(in) :: kmo            ! month (1, ..., 12)
-      integer, intent(in) :: kda            ! day of month (1, ..., 31)
+      integer, intent(in) :: kmo         ! month (1, ..., 12)
+      integer, intent(in) :: kda         ! day of month (1, ..., 31)
       integer, intent(in) :: TimeStep(2) ! months to be interpolated (1 to 12)
   !
   ! !REVISION HISTORY:
