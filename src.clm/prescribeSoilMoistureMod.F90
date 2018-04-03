@@ -633,7 +633,7 @@ module prescribeSoilMoistureMod
       call relavu(unitn)
 
 
-      ! if (masterproc) then
+      if (masterproc) then
         write(iulog,*) 'Read "pSMfile" from namelist:', trim(pSMfile)
         write(iulog,*) 'Read "monthly" from namelist:', monthly
         write(iulog,*) 'Read "interp_day" from namelist:', interp_day
@@ -666,7 +666,7 @@ module prescribeSoilMoistureMod
           endif
         endif
 
-      ! endif ! masterproc
+      endif ! masterproc
 
     end subroutine initPrescribeSoilMoisture
 
@@ -894,11 +894,11 @@ module prescribeSoilMoistureMod
       ! Read data from column
       ! ----------------------------------------------------------------------
       
-      ! if (masterproc) then
+      if (masterproc) then
         write(iulog,*) 'Attempting to read ', trim(cTimeStep), 'ly soil moisture data...'
         write(iulog,*) 'month = ', kmo, ' day = ', kda
         write(iulog,*) 'from file: ', pSMfile_local
-      ! endif ! masterproc
+      endif ! masterproc
       
       if ((interp_day) .or. (monthly)) then
         k_end = 2
