@@ -783,7 +783,7 @@ module prescribeSoilMoistureMod
       
       if (TimeStep_old /= TimeStep_current) then
         call readSoilMoisture (kmo, kda, TimeStep)
-        TimeStep_old = TimeStep(1)
+        TimeStep_old = TimeStep_current
       endif
 
     end subroutine interpSoilMoisture
