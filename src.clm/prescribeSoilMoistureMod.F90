@@ -868,9 +868,9 @@ module prescribeSoilMoistureMod
       endif
 
       if (monthly) then
-        cTimeStep = 'month'
+        cTimeStep = 'monthly'
       else
-        cTimeStep = 'day'
+        cTimeStep = 'daily'
       endif
 
       if (one_file_per_timestep) then
@@ -895,7 +895,7 @@ module prescribeSoilMoistureMod
       ! ----------------------------------------------------------------------
       
       if (masterproc) then
-        write(iulog,*) 'Attempting to read ', trim(cTimeStep), 'ly soil moisture data...'
+        write(iulog,*) 'Attempting to read ', trim(cTimeStep), ' soil moisture data...'
         write(iulog,*) 'month = ', kmo, ' day = ', kda
         write(iulog,*) 'from file: ', pSMfile_local
       endif ! masterproc
@@ -914,8 +914,7 @@ module prescribeSoilMoistureMod
 
 
           if (masterproc) then
-              write(iulog,*) 'Before read '
-              write(iulog,*) trim(cTimeStep), '(k) ', TimeStep(k)
+              write(iulog,*) 'Before read, timestep= ', TimeStep(k) 
           endif ! masterproc
 
 
@@ -932,8 +931,7 @@ module prescribeSoilMoistureMod
 
 
         if (masterproc) then
-            write(iulog,*) 'Successfully read ',  trim(cTimeStep), 'ly soil moisture data for'
-            write(iulog,*) cTimeStep, ' ', TimeStep(k)
+            write(iulog,*) 'Successfully read soil moisture data for timestep ', TimeStep(k)
         endif
 
 
