@@ -179,8 +179,8 @@ module prescribeSoilMoistureMod
           call endrun
         endif
         
-        mh2osoi_liq2t(:,:,:) = nan
-        mh2osoi_ice2t(:,:,:) = nan
+        mh2osoi_liq2t(:,:,:) = 0._r8
+        mh2osoi_ice2t(:,:,:) = 0._r8
       endif
 
       ! get file name and 'monthly' or 'daily' from namelist (only once)
@@ -866,6 +866,10 @@ module prescribeSoilMoistureMod
          write(iulog, *) subname, 'allocation big error '
          call endrun()
       endif
+
+
+mh2osoi_liq2t(:,:,:)
+
 
       if (monthly) then
         cTimeStep = 'monthly'
