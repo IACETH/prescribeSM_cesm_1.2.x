@@ -867,10 +867,6 @@ module prescribeSoilMoistureMod
          call endrun()
       endif
 
-
-mh2osoi_liq2t(:,:,:)
-
-
       if (monthly) then
         cTimeStep = 'monthly'
       else
