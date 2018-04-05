@@ -49,7 +49,7 @@ contains
     use ncdio_pio
     use clmtype
     ! mathause
-    use pSMtypeMod      , only : psm
+    use pSMtypeMod
     ! mathause
     use decompMod       , only : get_proc_bounds
     use clm_varpar      , only : nlevgrnd, nlevsno, nlevlak, nlevurb

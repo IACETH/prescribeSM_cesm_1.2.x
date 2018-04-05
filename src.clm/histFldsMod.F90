@@ -45,7 +45,7 @@ contains
 ! !USES:
     use clmtype
     ! mathause
-    use pSMtypeMod , only : psm
+    use pSMtypeMod
     ! mathause
     use clm_varcon , only : spval
     use clm_varpar , only : maxpatch_glcmec

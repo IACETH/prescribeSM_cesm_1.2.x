@@ -79,7 +79,7 @@ module prescribeSoilMoistureMod
       !
       ! !USES:
       use clmtype
-      use pSMtypeMod,     only : psm
+      use pSMtypeMod
       use shr_const_mod,  only : SHR_CONST_TKFRZ ! freezing temperature of water
       use decompMod,      only : get_proc_bounds
       use clm_varcon,     only : spval
@@ -805,7 +805,7 @@ module prescribeSoilMoistureMod
   !
   ! !USES:
       use clmtype
-      use pSMtypeMod,   only : psm
+      use pSMtypeMod
       use ncdio_pio
       use netcdf
       use shr_kind_mod, only : r8 => shr_kind_r8
