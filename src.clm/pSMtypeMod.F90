@@ -1,4 +1,4 @@
-module pSMtype
+module pSMtypeMod
 
 !----------------------------------------------------------------------- 
 !BOP
@@ -64,3 +64,5 @@ use decompMod,      only : get_proc_bounds
 
 
   end subroutine initPSMtype
+
+end module pSMtypeMod
