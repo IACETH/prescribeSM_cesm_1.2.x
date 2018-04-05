@@ -220,7 +220,7 @@ contains
 
     ! mathause
     ! initialize the pSMtype variable
-    initPSMtype()
+    call initPSMtype()
     ! mathause
 
     ! Initialize atm->lnd, lnd->atm, glc->lnd and lnd->glc data structures
