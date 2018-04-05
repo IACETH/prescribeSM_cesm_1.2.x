@@ -848,6 +848,7 @@ contains
          avgflag='A', long_name='water added through irrigation', &
          ptr_col=cwf%qflx_irrig, set_lake=0._r8)
 
+    ! mathause
     call hist_addfld1d (fname='RESERVOIR', units='mm', &
          avgflag='A', long_name='water stored in the reservoir', &
          ptr_col=cwf%reservoir, set_lake=0._r8)
@@ -859,10 +860,7 @@ contains
     call hist_addfld2d (fname='SOILICE_PRES',  units='kg/m2', type2d='levgrnd', &
          avgflag='A', long_name='prescribed soil ice (vegetated landunits only)', &
          ptr_col=cws%soilice_prescribed, l2g_scale_type='veg')
-
-
-
-
+    ! mathause
 
     if (create_glacier_mec_landunit) then
 

@@ -547,11 +547,11 @@ contains
 
        qflx_runoff(c) = qflx_drain(c) + qflx_surf(c) + qflx_qrgwl(c)
 
-       ! MHJH TURN OFF SUBTRACTION OF qflx_irrig
+       ! mathause: TURN OFF SUBTRACTION OF qflx_irrig
        ! if (ityplun(l)==istsoil .and. col%wtgcell(c) > 0.0_r8 ) then
        !    qflx_runoff(c) = qflx_runoff(c) - qflx_irrig(c)
        ! end if
-       ! MHJH
+       ! mathause
        
        if (ityplun(l)==isturb) then
          qflx_runoff_u(c) = qflx_runoff(c)

@@ -425,10 +425,10 @@ contains
           indexc = c
        end if
     end do
-    ! MHJH
+    ! mathause
     ! turn off water balance check
     found = .false.
-    ! MHJH
+    ! mathause
     if ( found ) then
        write(iulog,*)'WARNING:  water balance error ',&
             ' nstep = ',nstep,' indexc= ',indexc,' errh2o= ',errh2o(indexc),' landunit type= ',ltype(clandunit(indexc))
@@ -702,10 +702,10 @@ contains
        end if
     end do
 
-    ! MHJH
+    ! mathause
     ! turn off soil balance check
     found = .false.
-    ! MHJH
+    ! mathause
 
     if ( found ) then
        write(iulog,100)'BalanceCheck: soil balance error',nstep,indexc,errsoi_col(indexc)

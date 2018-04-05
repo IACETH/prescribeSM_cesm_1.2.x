@@ -1978,7 +1978,7 @@ contains
        end if
     end if
 
-
+    ! mathause
     ! column reservoir variable - reservoir
     if (flag == 'define') then
        call ncd_defvar(ncid=ncid, varname='reservoir', xtype=ncd_double,  &
@@ -1993,6 +1993,7 @@ contains
           cwf%reservoir = 0.0_r8
        end if
     end if
+    ! mathause
 
     ! initialize other variables that are derived from those
     ! stored in the restart buffer. (there may be a more appropriate

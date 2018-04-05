@@ -129,9 +129,9 @@ module clm_driver
   use clm_glclnd          , only : create_clm_s2x
   use perf_mod
 
-!MHJH
+!mathause
   use prescribeSoilMoistureMod, only : prescribeSoilMoisture
-!MHJH
+!mathause
 
 
 !
@@ -624,13 +624,13 @@ subroutine clm_drv(doalb, nextsw_cday, declinp1, declin, rstwr, nlend, rdate)
      call t_stopf('ecosysdyn')
 
 
-     ! MHJH
+     ! mathause
      ! ============================================================================
      ! Prescribe Soil Moisture
      ! ============================================================================
 
      call prescribeSoilMoisture(begc, endc, filter(nc)%num_nolakec, filter(nc)%nolakec)
-     ! MHJH
+     ! mathause
 
      ! Dry Deposition of chemical tracers (Wesely (1998) parameterizaion)
      call depvel_compute(begp,endp)

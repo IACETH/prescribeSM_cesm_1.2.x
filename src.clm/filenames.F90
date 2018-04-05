@@ -7,11 +7,24 @@ module filenames
 ! other modules or routines will store the actual filenames used, but
 ! this module is used to determine the names.
 
+! mathause
+! This file is taken from CAM - it was not available when running clm in
+! offline mode
+! mathause
+
+
+
+! mathause
 use clm_time_manager, only : get_curr_date
 ! use time_manager, only: get_curr_date, get_prev_date
+! mathause
+
 use shr_kind_mod, only: shr_kind_cs, shr_kind_cl
 use abortutils,   only: endrun
+
+! mathause
 use clm_varctl,   only : iulog
+! mathause
 
 implicit none
 private
@@ -121,8 +134,10 @@ character(len=nlen) function interpret_filename_spec( filename_spec, number, pre
          previous = prev
       end if
       if ( previous ) then
+         ! mathause
          ! call get_prev_date(year, month, day, ncsec)
          call endrun ('get_prev_date not available in clm')
+         ! mathause
       else
          call get_curr_date(year, month, day, ncsec)
       end if

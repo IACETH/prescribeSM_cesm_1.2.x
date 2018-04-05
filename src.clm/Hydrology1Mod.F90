@@ -356,14 +356,14 @@ contains
        end if
 
        ! Determine whether we're irrigating here; set qflx_irrig appropriately
-       ! MHJH TURN OFF OVERWRITING OF qflx_irrig
+       ! mathause: TURN OFF OVERWRITING OF qflx_irrig
        ! if (n_irrig_steps_left(c) > 0) then
        !    qflx_irrig(c)         = irrig_rate(c)
        !    n_irrig_steps_left(c) = n_irrig_steps_left(c) - 1
        ! else
        !    qflx_irrig(c) = 0._r8
        ! end if
-       ! MHJH TURN OFF OVERWRITING OF qflx_irrig
+       ! mathause
 
        ! Add irrigation water directly onto ground (bypassing canopy interception)
        ! Note that it's still possible that (some of) this irrigation water will runoff (as runoff is computed later)
