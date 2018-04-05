@@ -41,7 +41,7 @@ module pSMtypeMod
 type(prescribe_soilmoisture_type) :: psm
 
 
-use decompMod,      only : get_proc_bounds
+
 
 !------------------------------------------------------------------------
 !BOP
@@ -51,6 +51,8 @@ use decompMod,      only : get_proc_bounds
 ! !INTERFACE:
 
   subroutine initPSMtype()
+
+    use decompMod,      only : get_proc_bounds
 
     integer :: begc, endc   ! per-proc beginning and ending column indices
 
