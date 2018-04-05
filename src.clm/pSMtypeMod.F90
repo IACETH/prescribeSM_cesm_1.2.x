@@ -41,7 +41,7 @@ module pSMtypeMod
 type(prescribe_soilmoisture_type) :: psm
 
 
-
+  contains
 
 !------------------------------------------------------------------------
 !BOP
