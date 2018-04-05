@@ -79,6 +79,7 @@ module prescribeSoilMoistureMod
       !
       ! !USES:
       use clmtype
+      use pSMtypeMod,     only : psm
       use shr_const_mod,  only : SHR_CONST_TKFRZ ! freezing temperature of water
       use decompMod,      only : get_proc_bounds
       use clm_varcon,     only : spval
@@ -155,12 +156,10 @@ module prescribeSoilMoistureMod
       qflx_runoff       => cwf%qflx_runoff
       wa                => cws%wa
 
-
-
-      reservoir          => cwf%reservoir
-
-      soilliq_prescribed => cws%soilliq_prescribed
-      soilice_prescribed => cws%soilice_prescribed
+      ! pointer to our new datastructure
+      reservoir          => psm%reservoir
+      soilliq_prescribed => psm%soilliq_prescribed
+      soilice_prescribed => psm%soilice_prescribed
       
       ! implicit in arguments
       t_soisno    => ces%t_soisno
@@ -806,6 +805,7 @@ module prescribeSoilMoistureMod
   !
   ! !USES:
       use clmtype
+      use pSMtypeMod,   only : psm
       use ncdio_pio
       use netcdf
       use shr_kind_mod, only : r8 => shr_kind_r8

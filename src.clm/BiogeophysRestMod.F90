@@ -48,6 +48,9 @@ contains
 ! !USES:
     use ncdio_pio
     use clmtype
+    ! mathause
+    use pSMtypeMod      , only : psm
+    ! mathause
     use decompMod       , only : get_proc_bounds
     use clm_varpar      , only : nlevgrnd, nlevsno, nlevlak, nlevurb
     use clm_varcon      , only : istcrop
@@ -1985,12 +1988,12 @@ contains
             dim1name='column', &
             long_name='reservoir state', units='mm')
     else if (flag == 'read' .or. flag == 'write') then
-       call ncd_io(varname='reservoir', data=cwf%reservoir, &
+       call ncd_io(varname='reservoir', data=psm%reservoir, &
             dim1name='column', &
             ncid=ncid, flag=flag, readvar=readvar)
        if (flag=='read' .and. .not. readvar) then
           if (is_restart()) call endrun()
-          cwf%reservoir = 0.0_r8
+          psm%reservoir = 0.0_r8
        end if
     end if
     ! mathause
