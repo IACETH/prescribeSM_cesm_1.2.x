@@ -17,6 +17,9 @@ module pSMtypeMod
 ! !PUBLIC TYPES:
   implicit none
 
+  !PUBLIC MEMBER FUNCTIONS:
+  public :: initPSMtype  ! Sets Soil Moisture
+
   public
 
 
