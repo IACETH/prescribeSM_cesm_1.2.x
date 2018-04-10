@@ -70,7 +70,7 @@ contains
 ! !USES:
     use clmtypeInitMod  , only : initClmtype
     ! mathause
-    use pSMtypeMod      , only : initPSMtype
+    use pSMtypeInitMod  , only : initPSMtype
     ! mathause
     use clm_varpar      , only : maxpatch, clm_varpar_init
     use clm_varctl      , only : fsurdat, fatmlndfrc, flndtopo, fglcmask, noland 
