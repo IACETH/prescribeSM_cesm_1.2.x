@@ -11,6 +11,7 @@ module pSMtypeInitMod
 
 
   use shr_kind_mod,     only : r8 => shr_kind_r8
+  use clmtype
   use pSMtypeMod
   use clm_varpar,       only : nlevgrnd, nlevsoi
 
@@ -50,6 +51,8 @@ module pSMtypeInitMod
     psm%soilliq_prescribed(begc:endc,1:nlevgrnd) = 0._r8
     psm%soilice_prescribed(begc:endc,1:nlevgrnd) = 0._r8
 
+    ! set irrigation flux to 0
+    cwf%qflx_irrig(begc:endc)  = 0._r8
 
   end subroutine initPSMtype
 
