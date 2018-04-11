@@ -273,6 +273,9 @@ contains
     use decompMod       , only : get_proc_clumps, get_proc_bounds
     use filterMod       , only : allocFilters, setFilters
     use histFldsMod     , only : hist_initFlds
+    ! mathause
+    use pSMhistFldsMod  , only : hist_init_pSM_Flds
+    ! mathause
     use histFileMod     , only : hist_htapes_build, htapes_fieldlist
     use restFileMod     , only : restFile_getfile, &
                                  restFile_open, restFile_close, restFile_read 
@@ -394,6 +397,11 @@ contains
     call t_startf('hist_initFlds')
 
     call hist_initFlds()
+
+    ! mathause
+    call hist_init_pSM_Flds()
+    ! mathause
+    
     ! On restart process the history namelist. Later the namelist from the restart file
     ! will be used. But, this allows some basic checking to make sure you didn't
     ! try to change the history namelist on restart.
