@@ -149,6 +149,27 @@ contains
          avgflag='A', long_name='ground temperature', &
          ptr_col=ces%t_grnd, c2l_scale_type='urbans')
 
+    ! _WT addition 26/02/2016 
+    ! (RAH amd TAF: inspired by RAM1 - but RAM1 is inside CN if statement)
+    ! (note that TAF is different than AGL paper where is was forc_t over bare soil and spval over the lakes)
+    ! (EMV and EMG: taken outside CN if statement)
+    call hist_addfld1d (fname='RAH', units='s/m', &
+         avgflag='A', long_name='thermal resistance', &
+         ptr_pft=pps%rah1, default='inactive')
+         
+    call hist_addfld1d (fname='TAF', units='K', &
+         avgflag='A', long_name='air temperature within canopy space', &
+         ptr_pft=pps%taf1, default='inactive')
+         
+    call hist_addfld1d (fname='EMV', units='proportion', &
+         avgflag='A', long_name='vegetation emissivity', &
+         ptr_pft=pps%emv, default='inactive')
+
+    call hist_addfld1d (fname='EMG', units='proportion', &
+         avgflag='A', long_name='ground emissivity', &
+         ptr_col=cps%emg, default='inactive')         
+    ! _WT addition 26/02/2016    
+
     call hist_addfld1d (fname='TG_U', units='K',  &
          avgflag='A', long_name='Urban ground temperature', &
          ptr_col=ces%t_grnd_u, set_nourb=spval, c2l_scale_type='urbans')
@@ -851,6 +872,12 @@ contains
          avgflag='A', long_name='water added through irrigation', &
          ptr_col=cwf%qflx_irrig, set_lake=0._r8)
 
+    ! _WT addition 19/02/2016    
+    call hist_addfld1d (fname='QFLOOD',  units='mm/s',  &
+         avgflag='A', long_name='runoff from river flooding', &
+         ptr_lnd=gwf%qflx_floodg)
+    ! _WT addition 19/02/2016   
+
     ! mathause
     call hist_addfld1d (fname='RESERVOIR', units='mm', &
          avgflag='A', long_name='water stored in the reservoir', &
@@ -936,6 +963,12 @@ contains
     call hist_addfld1d (fname='WIND', units='m/s',  &
          avgflag='A', long_name='atmospheric wind velocity magnitude', &
          ptr_lnd=clm_a2l%forc_wind)
+    
+    ! _WT addition 26/03/2016         
+    call hist_addfld1d (fname='RHO', units='kg/m^2',  &
+         avgflag='A', long_name='atmospheric air density', &
+         ptr_lnd=clm_a2l%forc_rho)
+    ! _WT addition 26/03/2016
 
     ! Rename of WIND for Urban intercomparision project
     call hist_addfld1d (fname='Wind', units='m/s',  &
@@ -4012,10 +4045,12 @@ contains
        !-------------------------------
        ! PFT physical state variables not already defined by default
        !-------------------------------
-
-       call hist_addfld1d (fname='EMV', units='proportion', &
-            avgflag='A', long_name='vegetation emissivity', &
-            ptr_pft=pps%emv, default='inactive')
+       
+       ! _WT commented 26/02/2016  (taken outside C/N if statement!)   
+       ! call hist_addfld1d (fname='EMV', units='proportion', &
+       !      avgflag='A', long_name='vegetation emissivity', &
+       !      ptr_pft=pps%emv, default='inactive')
+       ! _WT commented 26/02/2016 
 
        call hist_addfld1d (fname='Z0MV', units='m', &
             avgflag='A', long_name='roughness length over vegetation, momentum', &
@@ -4227,9 +4262,11 @@ contains
        ! Column physical state variables not already defined by default
        !-------------------------------
        
-       call hist_addfld1d (fname='EMG', units='proportion', &
-            avgflag='A', long_name='ground emissivity', &
-            ptr_col=cps%emg, default='inactive')
+       ! _WT commented 26/02/2016  (taken outside C/N if statement!)     
+       ! call hist_addfld1d (fname='EMG', units='proportion', &
+       !      avgflag='A', long_name='ground emissivity', &
+       !      ptr_col=cps%emg, default='inactive')
+       ! _WT commented 26/02/2016
 
        call hist_addfld1d (fname='Z0MG', units='m', &
             avgflag='A', long_name='roughness length over ground, momentum', &
