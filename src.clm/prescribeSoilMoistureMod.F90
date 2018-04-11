@@ -45,7 +45,7 @@ module prescribeSoilMoistureMod
   integer, private            :: levstart = 1                    ! start level prescribing SM
   integer, private            :: levstop = nlevsoi               ! end level prescribing SM
   logical, private            :: use_qdrai = .true.              ! use qdrai in pSMtype3
-  logical, private            :: one_file_per_timestep = .true.  ! use one file for each timestep
+  logical, private            :: one_file_per_day = .true.  ! use one file for each timestep
 
   ! REVISION HISTORY:
   ! Created by 
@@ -606,7 +606,7 @@ module prescribeSoilMoistureMod
 
       ! Input datasets
       namelist /prescribe_sm/  &
-           pSMfile, monthly, pSMtype, reservoir_capacity, levstart, levstop, use_qdrai, interp_day, one_file_per_timestep
+           pSMfile, monthly, pSMtype, reservoir_capacity, levstart, levstop, use_qdrai, interp_day, one_file_per_day
 
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       ! CAREFUL: IF YOU USE A DAILY pSMfile BUT SET monthly = .true.  !
@@ -641,7 +641,7 @@ module prescribeSoilMoistureMod
         write(iulog,*) 'Read "levstart" from namelist:', levstart
         write(iulog,*) 'Read "levstop" from namelist:', levstop
         write(iulog,*) 'Read "use_qdrai" from namelist:', use_qdrai
-        write(iulog,*) 'Read "one_file_per_timestep" from namelist:', one_file_per_timestep
+        write(iulog,*) 'Read "one_file_per_day" from namelist:', one_file_per_day
 
         if (levstart .gt. levstop) then
           call endrun(trim(subname)//'levstop must be bigger than levstart')
@@ -659,9 +659,9 @@ module prescribeSoilMoistureMod
           call endrun(trim(subname)//'reservoir_capacity must be >= 0')
         endif
 
-        if (one_file_per_timestep) then
+        if (one_file_per_day) then
           if ((monthly) .or. (interp_day)) then
-            call endrun(trim(subname)//'"monthly" and "interp_day" must be .false. if "one_file_per_timestep" is .true.')
+            call endrun(trim(subname)//'"monthly" and "interp_day" must be .false. if "one_file_per_day" is .true.')
           endif
         endif
 
@@ -762,7 +762,7 @@ module prescribeSoilMoistureMod
           TimeStep_current = TimeStep(1)
         else ! no interpolation during one day
           
-          if (one_file_per_timestep) then
+          if (one_file_per_day) then
             TimeStep(1) = 1 ! always one
             TimeStep(2) = 1 ! constant / not used
           else
@@ -873,14 +873,14 @@ module prescribeSoilMoistureMod
         cTimeStep = 'daily'
       endif
 
-      if (one_file_per_timestep) then
+      if (one_file_per_day) then
         ! parse file name according to date/time of model
         ! %y -> 2005 %m -> 05 %d -> 20
         pSMfile_local = interpret_filename_spec( pSMfile )
 
         ! ensure the string has changed
         if (trim(pSMfile_local) == trim(pSMfile)) then
-            call endrun(trim(subname)//'set "one_file_per_timestep" to .false. when not providing one file per timestep')
+            call endrun(trim(subname)//'set "one_file_per_day" to .false. when not providing one file per timestep')
         endif
 
       else
