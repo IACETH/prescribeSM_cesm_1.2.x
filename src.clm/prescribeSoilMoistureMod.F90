@@ -213,9 +213,9 @@ module prescribeSoilMoistureMod
               ! save current state of h2osoi liq and ice
               soilliq_prescribed(c, j) = h2osoi_liq(c,j)
               soilice_prescribed(c, j) = h2osoi_ice(c,j)
-          end do ! j = 1, nlevgrnd
+          enddo ! j = 1, nlevgrnd
         endif
-      end do ! fc = 1, num_nolakec
+      enddo ! fc = 1, num_nolakec
 
 ! =======================================================================================================================
 
@@ -238,9 +238,9 @@ module prescribeSoilMoistureMod
                 h2osoi_liq(c,j) = SL
                 h2osoi_ice(c,j) = SI
               endif ! liq >= 0
-            end do ! j = 1, nlevgrnd
+            enddo ! j = 1, nlevgrnd
           endif
-        end do ! fc = 1, num_nolakec
+        enddo ! fc = 1, num_nolakec
 
 ! =======================================================================================================================
 
@@ -272,9 +272,9 @@ module prescribeSoilMoistureMod
 
                 h2osoi_liq(c,j) = SM
               endif
-            end do 
+            enddo 
           endif
-        end do
+        enddo
 
 ! =======================================================================================================================
 
@@ -381,7 +381,7 @@ module prescribeSoilMoistureMod
                   endif              
                 endif ! (SMdeficit .gt. 0._r8)
               endif ! (min(mh2osoi_liq2t(c,j,1), ...) .ge. 0_r8) then
-            end do ! j = 1, nlevgrnd
+            enddo ! j = 1, nlevgrnd
 
 
             ! Fill the Reservoir if neccesary and possible
@@ -407,7 +407,7 @@ module prescribeSoilMoistureMod
             endif
 
           endif ! istsoil
-        end do ! fc = 1, num_nolakec
+        enddo ! fc = 1, num_nolakec
 
 ! =======================================================================================================================
 
@@ -442,9 +442,9 @@ module prescribeSoilMoistureMod
                 ! ONLY PRESCRIBE IF LESS THAN
                 h2osoi_liq(c,j) = max(h2osoi_liq(c,j), SM)
               endif
-            end do 
+            enddo 
           endif
-        end do
+        enddo
 
 ! =======================================================================================================================
 
@@ -484,9 +484,9 @@ module prescribeSoilMoistureMod
 
 
               endif
-            end do 
+            enddo 
           endif
-        end do
+        enddo
 
 ! =======================================================================================================================
 
@@ -529,7 +529,7 @@ module prescribeSoilMoistureMod
                 qflx_irrig(c) = qflx_irrig(c) + max(SM - h2osoi_liq(c,j), 0._r8) / dtime
                   
 
-              end do ! j = 1, nlevgrnd
+              enddo ! j = 1, nlevgrnd
               ! restrict the irrigation to the surface runoff of this time step
 
               if (masterproc) then
@@ -546,7 +546,7 @@ module prescribeSoilMoistureMod
 
             endif ! gt 0 and not spval
           endif ! istsoil
-        end do ! fc = 1, num_nolakec
+        enddo ! fc = 1, num_nolakec
 
 
       endif ! pSMtype
@@ -563,9 +563,9 @@ module prescribeSoilMoistureMod
               ! subtract the old from the new SL and SI state
               soilliq_prescribed(c, j) = h2osoi_liq(c,j) - soilliq_prescribed(c, j)
               soilice_prescribed(c, j) = h2osoi_ice(c,j) - soilice_prescribed(c, j)
-          end do ! j = 1, nlevgrnd
+          enddo ! j = 1, nlevgrnd
         endif
-      end do ! fc = 1, num_nolakec
+      enddo ! fc = 1, num_nolakec
 
     end subroutine prescribeSoilMoisture
 
@@ -628,7 +628,7 @@ module prescribeSoilMoistureMod
           if (ierr < 0) then
               call endrun(trim(subname)//' encountered end-of-file on prescribe_SM_nl read')
           endif
-      end do
+      enddo
       call relavu(unitn)
 
 
@@ -942,11 +942,11 @@ module prescribeSoilMoistureMod
             do j = 1, nlevsoi
               mh2osoi_liq2t(c, j, k) = mh2osoi_liq(c, j)
               mh2osoi_ice2t(c, j, k) = mh2osoi_ice(c, j)
-            end do
+            enddo
           endif
-        end do   ! end of loop over columns
+        enddo   ! end of loop over columns
 
-      end do   ! end of loop over months
+      enddo   ! end of loop over months
       
       if (masterproc) then
         write(iulog,*) 'Successfully read soil moisture data'
