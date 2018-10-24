@@ -48,6 +48,9 @@ contains
 ! !USES:
     use ncdio_pio
     use clmtype
+    ! mathause
+    use pSMtypeMod
+    ! mathause
     use decompMod       , only : get_proc_bounds
     use clm_varpar      , only : nlevgrnd, nlevsno, nlevlak, nlevurb, nlevsoi, &
                                  nlevcan
@@ -2398,6 +2401,23 @@ contains
           endif
        end if
     end if
+
+    ! mathause
+    ! column reservoir variable - reservoir
+    if (flag == 'define') then
+       call ncd_defvar(ncid=ncid, varname='reservoir', xtype=ncd_double,  &
+            dim1name='column', &
+            long_name='reservoir state', units='mm')
+    else if (flag == 'read' .or. flag == 'write') then
+       call ncd_io(varname='reservoir', data=psm%reservoir, &
+            dim1name='column', &
+            ncid=ncid, flag=flag, readvar=readvar)
+       if (flag=='read' .and. .not. readvar) then
+          if (is_restart()) call endrun()
+          psm%reservoir = 0.0_r8
+       end if
+    end if
+    ! mathause
 
     ! gridcell type water flux variable - qflx_floodg
     if (flag == 'define') then
