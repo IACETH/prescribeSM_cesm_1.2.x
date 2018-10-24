@@ -474,7 +474,12 @@ contains
           indexc = c
        end if
     end do
-
+    
+    ! mathause
+    ! turn off water balance check
+    found = .false.
+    ! mathause
+    
     if ( found ) then
        write(iulog,*)'WARNING:  water balance error ',&
             ' nstep = ',nstep,' indexc= ',indexc,' errh2o= ',errh2o(indexc)
@@ -743,6 +748,10 @@ contains
           indexc = c
        end if
     end do
+    ! mathause
+    ! turn off soil balance check
+    found = .false.
+    ! mathause
     if ( found ) then
        if (abs(errsoi_col(indexc)) > .10_r8 .and. (nstep > 2) ) then
           write(iulog,100)'BalanceCheck: soil balance error',nstep,indexc,errsoi_col(indexc)
