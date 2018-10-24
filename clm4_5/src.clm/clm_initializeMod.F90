@@ -68,6 +68,9 @@ contains
 !
 ! !USES:
     use clmtypeInitMod  , only : initClmtype
+    ! mathause
+    use pSMtypeInitMod  , only : initPSMtype
+    ! mathause
     use clm_varpar      , only : maxpatch, clm_varpar_init
     use clm_varcon      , only : clm_varcon_init
     use clm_varctl      , only : fsurdat, fatmlndfrc, flndtopo, fglcmask, noland 
@@ -225,6 +228,12 @@ contains
     ! Allocate memory and initialize values of clmtype data structures
 
     call initClmtype()
+
+    ! mathause
+    ! initialize the pSMtype variable
+    call initPSMtype()
+    ! mathause
+
 
     ! Initialize atm->lnd, lnd->atm, glc->lnd and lnd->glc data structures
 
