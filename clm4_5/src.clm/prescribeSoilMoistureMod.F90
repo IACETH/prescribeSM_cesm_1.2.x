@@ -43,7 +43,7 @@ module prescribeSoilMoistureMod
   integer, private            :: pSMtype = 1                     ! how to prescribe SM [default = 1] 
   real(r8), private           :: reservoir_capacity = 0._r8      ! capacity of the reservoir storing water for dry periods
   integer, private            :: levstart = 1                    ! start level prescribing SM
-  integer, private            :: levstop = nlevsoi               ! end level prescribing SM
+  integer, private            :: levstop                         ! end level prescribing SM
   logical, private            :: use_qdrai = .true.              ! use qdrai in pSMtype3
   logical, private            :: one_file_per_day = .true.  ! use one file for each timestep
 
@@ -603,6 +603,9 @@ module prescribeSoilMoistureMod
   !EOP
 
       subname = 'initPrescribeSoilMoisture'
+
+      ! set default for levstop
+      levstop = nlevsoi
 
       ! Input datasets
       namelist /prescribe_sm/  &
